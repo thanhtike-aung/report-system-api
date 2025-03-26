@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = "mysql://root:root@localhost:3306/mtm-report"
+}
+
+model User {
+  id              Int @id @default(autoincrement())
+  name            String
+  email           String  @unique
+  password        String
+  role            Role
+  supervisor_id   Int?
+  supervisor      User? @relation("UserToSupervisor", fields: [supervisor_id], references: [id])
+  subordinates    User[] @relation("UserToSupervisor")
+  report_reported Report[] @relation(name: "ReporterRelation")
+  report_created  Report[] @relation(name: "CreatorRelation")
+  project_id      Int
+  project         Project @relation(fields: [project_id], references: [id])
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @default(now())
+}
+
+model Report {
+  id            Int @id @default(autoincrement())
+  type          ReportType
+  workspace     WorkSpace?
+  project       String
+  leave_period  LeavePeriod?
+  leave_reason  String?
+  late_minute   Int?
+  reported_by   Int
+  reporter      User  @relation(name: "ReporterRelation", fields: [reported_by], references: [id])
+  status        ReportStatus
+  created_by    Int
+  creator       User  @relation(name: "CreatorRelation", fields: [created_by], references: [id])
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @default(now())
+}
+
+model Project {
+  id          Int @id @default(autoincrement())
+  name        String
+  users       User[]
+  created_at  DateTime @default(now())
+  updated_at  DateTime @default(now())
+}
+
+model Attendance {
+  id          Int @id @default(autoincrement())
+  content     String
+  created_at  DateTime @default(now())
+}
+
+enum ReportType {
+  working
+  leave
+}
+
+enum WorkSpace {
+  office
+  home
+}
+
+enum LeavePeriod {
+  full
+  morning
+  evening
+}
+
+enum ReportStatus {
+  pending
+  reported
+  failed
+}
+
+enum Role {
+  rootadmin
+  manager
+  bse
+  leader
+  subleader
+  member
+}

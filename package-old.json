@@ -1,0 +1,32 @@
+{
+  "name": "mtm-report-api",
+  "version": "1.0.0",
+  "description": "report system for dev2",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "node dist/index.ts",
+    "watch": "nodemon --ext ts --exec ts-node src/index.ts",
+    "test": "npm run test",
+    "prisma:seed": "ts-node prisma/seeds/userSeed.ts"
+  },
+  "author": "thanhtikeaung",
+  "license": "ISC",
+  "dependencies": {
+    "@prisma/client": "^6.4.1",
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/node": "^22.13.9",
+    "nodemon": "^3.1.9",
+    "prisma": "^6.4.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.2"
+  }
+}
