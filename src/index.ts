@@ -18,7 +18,7 @@ app.use(cors());
 
 // cron job (scheduled at 08:30)
 cron.schedule(
-  "31 11 * * *",
+  "35 14 * * *",
   () => {
     sendAttendanceToTeams();
   },

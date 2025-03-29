@@ -6,7 +6,7 @@ import {
 } from "../../utils/sendToTeams";
 
 const MAX_RETRIES = 3;
-const RETRY_DELAY_MS = 1 * 60 * 1000;
+const RETRY_DELAY_MS = 5 * 60 * 1000;
 
 const getNotReportedUsers = (users: any[], reports: any[]) => {
   const reportedUserIds = reports.map((report) => report.reporter?.id);
