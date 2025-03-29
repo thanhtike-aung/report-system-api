@@ -137,7 +137,7 @@ const buildNoReportedUsersMessage = (noReportedUsers: User[]): any => {
             {
               type: "Action.OpenUrl",
               title: "Click to report",
-              url: "http://localhost:5173/report/self",
+              url: "https://report-system-client-ver001.vercel.app/",
             },
           ],
         },
