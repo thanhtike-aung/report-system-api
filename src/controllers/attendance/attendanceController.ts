@@ -5,33 +5,18 @@ import {
   sendNoReportedUsersToTeams,
 } from "../../utils/sendToTeams";
 
-const MAX_RETRIES = 3;
-const RETRY_DELAY_MS = 5 * 60 * 1000;
-
 const getNotReportedUsers = (users: any[], reports: any[]) => {
   const reportedUserIds = reports.map((report) => report.reporter?.id);
   return users.filter((user) => !reportedUserIds.includes(user.id));
 };
 
-const handleRetryDelay = async (retryCount: number) => {
-  if (retryCount < MAX_RETRIES) {
-    console.log("Retrying...");
-    await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
-  } else {
-    console.error("Maximum retry limit reached!");
-  }
-};
-
 export const sendAttendanceToTeams = async (): Promise<void> => {
-  let retryCount = 0;
-  let isSuccess = false;
+  const MAX_RETRIES = 5;
+  const RETRY_DELAY_MS = 15 * 60 * 1000;
 
-  while (retryCount <= MAX_RETRIES && !isSuccess) {
+  for (let retryCount = 1; retryCount <= MAX_RETRIES; retryCount++) {
+    console.log(`Attempt ${retryCount}/${MAX_RETRIES}`);
     try {
-      console.log(
-        `Attempting cron job (Attempt ${retryCount}/${MAX_RETRIES}) ...`,
-      );
-
       const users = await getAllUsers();
       const reports = await getTodayReports();
 
@@ -42,11 +27,16 @@ export const sendAttendanceToTeams = async (): Promise<void> => {
       }
 
       await sendAttendanceToTeamsUtils(reports, users.length);
-      isSuccess = true;
+      console.log("Attendance sent successfully!");
+      return;
     } catch (error) {
-      console.error(error);
-      retryCount++;
-      await handleRetryDelay(retryCount);
+      console.error(`Error on attempt ${retryCount}:`, error);
+      if (retryCount < MAX_RETRIES) {
+        console.log(`Retrying in ${RETRY_DELAY_MS / 1000} seconds...`);
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+      } else {
+        console.error("Maximum retry limit reached. Exiting.");
+      }
     }
   }
 };
