@@ -3,11 +3,11 @@ import dotenv from "dotenv";
 import cors from "cors";
 import cron from "node-cron";
 import { setAuthRoutes } from "./routes/authRoutes";
-import { setReportRoutes } from "./routes/reportRoutes";
 import { setUserRoutes } from "./routes/userRoutes";
 import { setProjectRoutes } from "./routes/projectRoutes";
 import { setAttendanceRoutes } from "./routes/attendanceRoutes";
 import { sendAttendanceToTeams } from "./controllers/attendance/attendanceController";
+import { setReportRoutes } from "./routes/reportRoutes";
 
 dotenv.config();
 
@@ -18,7 +18,7 @@ app.use(cors());
 
 // cron job (scheduled at 08:30)
 cron.schedule(
-  "25 15 * * *",
+  "42 01 * * *",
   () => {
     sendAttendanceToTeams();
   },
@@ -30,9 +30,9 @@ cron.schedule(
 // routing
 setAuthRoutes(app);
 setUserRoutes(app);
+setAttendanceRoutes(app);
 setReportRoutes(app);
 setProjectRoutes(app);
-setAttendanceRoutes(app);
 
 app.listen(process.env.NODE_PORT, () => {
   console.info(`server is running on ${process.env.NODE_PORT}`);

@@ -1,4 +1,4 @@
-import { LeavePeriod } from "types/report";
+import { LeavePeriod } from "types/attendance";
 
 export const TYPE = {
   WORKING: "working",
@@ -28,7 +28,7 @@ export const LEAVE_REASON = {
   OTHER: "other",
 };
 
-export const REPORT_STATUS = {
+export const ATTENDANCE_STATUS = {
   PENDING: "pending",
   REPORTED: "reported",
   FAILED: "failed",

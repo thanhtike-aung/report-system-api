@@ -1,15 +1,14 @@
 import { MESSAGE, STATUS_CODES } from "../../constants/messages";
-import { NextFunction, Request, Response } from "express";
+import { Request, Response } from "express";
 import {
-  create as createReportService,
-  getByToday as getTodayReportService,
-  get as getReportService,
+  create as createReportsService,
+  get as getReportsService,
+  update as updateReportsService,
 } from "../../services/report/reportService";
-import { NotFoundError } from "../../utils/errors";
 
 /**
- *
- * @param req
+ * get all reports
+ * @param _req
  * @param res
  */
 export const getReports = async (
@@ -17,7 +16,7 @@ export const getReports = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const reports = await getReportService();
+    const reports = await getReportsService();
     res.status(STATUS_CODES.OK).json(reports);
   } catch (error) {
     console.error(error);
@@ -28,17 +27,17 @@ export const getReports = async (
 };
 
 /**
- *
+ * create reports
  * @param req
  * @param res
  */
-export const createReport = async (
+export const createReports = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
   try {
-    const report = await createReportService(req.body);
-    res.status(STATUS_CODES.CREATED).json(report);
+    const createdReportsCount = await createReportsService(req.body);
+    res.status(STATUS_CODES.OK).json(createdReportsCount);
   } catch (error) {
     console.error(error);
     res
@@ -48,20 +47,17 @@ export const createReport = async (
 };
 
 /**
- * get report by date
+ * update reports
  * @param req
  * @param res
  */
-export const getReportByDate = async (
+export const updateReports = async (
   req: Request,
   res: Response,
-  next: NextFunction,
 ): Promise<void> => {
   try {
-    const report = await getTodayReportService();
-    if (!report) throw NotFoundError("Report " + MESSAGE.ERROR.NOT_FOUND);
-
-    res.status(STATUS_CODES.OK).json(report);
+    const updatedReportsCount = await updateReportsService(req.body);
+    res.status(STATUS_CODES.OK).json(updatedReportsCount);
   } catch (error) {
     console.error(error);
     res

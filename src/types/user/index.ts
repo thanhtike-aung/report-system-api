@@ -25,5 +25,7 @@ export interface UserPayload {
   password: string;
   projectId: string;
   role: UserRole;
+  isActive: boolean;
+  workflowsUrl?: string;
   supervisorId: string | null;
 }

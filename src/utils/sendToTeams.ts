@@ -2,16 +2,16 @@ import axios from "axios";
 import dayjs from "dayjs";
 import { MESSAGE } from "../constants/messages";
 import { User } from "../types/user";
-import { Report } from "../types/report";
-import { LEAVE_PERIOD, TYPE, WORKSPACE } from "../constants/report";
+import { Attendance } from "../types/attendance";
+import { LEAVE_PERIOD, TYPE, WORKSPACE } from "../constants/attendance";
 
 /**
  * send attendance report to ms teams via endpoint
- * @param todayReports
+ * @param todayAttendances
  * @param totalMembers
  */
 export const sendAttendanceToTeams = async (
-  todayReports: Report[],
+  todayAttendances: Attendance[],
   totalMembers: number,
 ): Promise<void> => {
   const webhookUrl = process.env.TEAMS_WEBHOOK;
@@ -20,11 +20,11 @@ export const sendAttendanceToTeams = async (
     if (!webhookUrl) {
       throw new Error(MESSAGE.ERROR.NO_TEAMS_WEBHOOK);
     }
-    const message = buildReportCardMessage(todayReports, totalMembers);
+    const message = buildAttendanceCardMessage(todayAttendances, totalMembers);
     await axios.post(webhookUrl, message);
     console.info("Attendance report sent to Microsoft Teams successfully!");
   } catch (error) {
-    console.error("Failed to send report:", error);
+    console.error("Failed to send attendance report:", error);
   }
 };
 
@@ -50,39 +50,48 @@ export const sendNoReportedUsersToTeams = async (
 
 /**
  * build attendance message template
- * @param todayReports
+ * @param todayAttendances
  * @param totalMembers
  * @returns
  */
-const buildReportCardMessage = (
-  todayReports: Report[],
+const buildAttendanceCardMessage = (
+  todayAttendances: Attendance[],
   totalMembers: number,
 ): any => {
   const today = dayjs().format("YYYY.MM.DD");
-  const workingMembers = filterReports(todayReports, TYPE.WORKING);
-  const leaveMembers = filterReports(todayReports, TYPE.LEAVE);
-  const officeMembers = filterReports(
-    todayReports,
+  const workingMembers = filterAttendances(todayAttendances, TYPE.WORKING);
+  const leaveMembers = filterAttendances(todayAttendances, TYPE.LEAVE);
+  const officeMembers = filterAttendances(
+    todayAttendances,
     undefined,
     WORKSPACE.OFFICE,
   );
-  const wfhMembers = filterReports(todayReports, undefined, WORKSPACE.HOME);
-  const lateMembers = todayReports.filter((report) => report.late_minute !== 0);
+  const wfhMembers = filterAttendances(
+    todayAttendances,
+    undefined,
+    WORKSPACE.HOME,
+  );
+  const lateMembers = todayAttendances.filter(
+    (attendance) => attendance.late_minute !== 0,
+  );
 
-  const officeMembersReport = generateReportBlocks(officeMembers, "office");
-  const leaveReport = generateReportBlocks(leaveMembers, "leave");
-  const wfhReport = generateReportBlocks(
+  const officeMemberAttendance = generateAttendanceBlocks(
+    officeMembers,
+    "office",
+  );
+  const leaveMemberAttendance = generateAttendanceBlocks(leaveMembers, "leave");
+  const wfhMemberAttendance = generateAttendanceBlocks(
     wfhMembers,
     "wfh",
     officeMembers.length,
   );
-  const lateReport = generateReportBlocks(lateMembers, "late");
+  const lateMemberAttendance = generateAttendanceBlocks(lateMembers, "late");
 
   return createAdaptiveCard(today, totalMembers, workingMembers.length, {
-    officeMembersReport,
-    wfhReport,
-    leaveReport,
-    lateReport,
+    officeMemberAttendance,
+    wfhMemberAttendance,
+    leaveMemberAttendance,
+    lateMemberAttendance,
     leaveMembersCount: leaveMembers.length,
     lateMembersCount: lateMembers.length,
   });
@@ -136,7 +145,7 @@ const buildNoReportedUsersMessage = (noReportedUsers: User[]): any => {
           actions: [
             {
               type: "Action.OpenUrl",
-              title: "Click to report",
+              title: "Click to report attendance",
               url: "https://report-system-client-ver001.vercel.app/",
             },
           ],
@@ -148,63 +157,70 @@ const buildNoReportedUsersMessage = (noReportedUsers: User[]): any => {
 
 /**
  * helper func
- * @param reports
+ * @param attendances
  * @param type
  * @param workspace
  * @returns
  */
-const filterReports = (
-  reports: Report[],
+const filterAttendances = (
+  attendances: Attendance[],
   type?: string,
   workspace?: string,
 ) => {
-  return reports.filter((report) => {
+  return attendances.filter((attendance) => {
     return (
-      (!type || report.type === type) &&
-      (!workspace || report.workspace === workspace)
+      (!type || attendance.type === type) &&
+      (!workspace || attendance.workspace === workspace)
     );
   });
 };
 
 /**
  * helper func
- * @param reports
+ * @param attendances
  * @param type
  * @param offset
  * @returns
  */
-const generateReportBlocks = (
-  reports: Report[],
+const generateAttendanceBlocks = (
+  attendances: Attendance[],
   type: string,
   offset: number = 0,
 ) => {
-  const spaces = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
-  return reports.map((report, index) => {
-    const baseText = `${index + 1 + offset}. ${report.reporter?.name} ${spaces}`;
+  const SPACES = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
+
+  const determineWfhWorkingTime = (leavePeriod: string | null): string => {
+    if (!leavePeriod) return "";
+
+    return leavePeriod === LEAVE_PERIOD.MORNING ? "【evening】" : "【morning】";
+  };
+
+  return attendances.map((attendance, index) => {
+    const baseText = `${index + 1 + offset}. ${attendance.reporter?.name} ${SPACES}`;
     switch (type) {
       case "office":
         return {
           type: "TextBlock",
-          text: `${baseText}(${report.reporter?.project?.name})`,
+          text: `${baseText}(${attendance.reporter?.project?.name})`,
         };
       case "leave":
         return {
           type: "TextBlock",
-          text: `${baseText}${report.leave_reason} ${
-            report.leave_period !== LEAVE_PERIOD.FULL
-              ? `【 ${report.leave_period} 】`
+          text: `${baseText} (${attendance.leave_reason}) ${
+            attendance.leave_period !== LEAVE_PERIOD.FULL
+              ? `【 ${attendance.leave_period} 】`
               : ""
           }`,
         };
       case "wfh":
         return {
           type: "TextBlock",
-          text: `${baseText}(${report.reporter?.project?.name}) 【${report.leave_period === LEAVE_PERIOD.MORNING ? LEAVE_PERIOD.EVENING : LEAVE_PERIOD.MORNING}】`,
+          text: `${baseText}(${attendance.reporter?.project?.name}) ${determineWfhWorkingTime(attendance.leave_period)}`,
         };
       case "late":
         return {
           type: "TextBlock",
-          text: `${baseText}(${report.late_minute}min)`,
+          text: `${baseText}(${attendance.late_minute}min)`,
         };
       default:
         return {};
@@ -225,10 +241,10 @@ const createAdaptiveCard = (
   totalMembers: number,
   workingMembersCount: number,
   {
-    officeMembersReport,
-    wfhReport,
-    leaveReport,
-    lateReport,
+    officeMemberAttendance,
+    wfhMemberAttendance,
+    leaveMemberAttendance,
+    lateMemberAttendance,
     leaveMembersCount,
     lateMembersCount,
   }: any,
@@ -258,13 +274,16 @@ const createAdaptiveCard = (
               text: "▼ オフィス勤務",
               weight: "Bolder",
             },
-            ...officeMembersReport,
+            ...officeMemberAttendance,
             {
               type: "TextBlock",
-              text: wfhReport.length === 0 ? "▼ 在宅勤務 : 無し" : "▼ 在宅勤務",
+              text:
+                wfhMemberAttendance.length === 0
+                  ? "▼ 在宅勤務 : 無し"
+                  : "▼ 在宅勤務",
               weight: "Bolder",
             },
-            ...wfhReport,
+            ...wfhMemberAttendance,
             {
               type: "TextBlock",
               text:
@@ -272,7 +291,7 @@ const createAdaptiveCard = (
                   ? "欠勤：無し"
                   : `欠勤： ${leaveMembersCount}名`,
             },
-            ...leaveReport,
+            ...leaveMemberAttendance,
             {
               type: "TextBlock",
               text:
@@ -280,7 +299,7 @@ const createAdaptiveCard = (
                   ? "遅刻： 無し"
                   : `遅刻： ${lateMembersCount}名`,
             },
-            ...lateReport,
+            ...lateMemberAttendance,
           ],
         },
       },

@@ -40,6 +40,8 @@ export const create = async (user: UserPayload): Promise<User> => {
       password: await hash(user.password, 10),
       project_id: Number(user.projectId),
       role: user.role,
+      is_active: user.isActive,
+      workflows_url: user.workflowsUrl,
       supervisor_id:
         user.supervisorId && user.supervisorId !== "0"
           ? Number(user.supervisorId)
@@ -62,10 +64,26 @@ export const update = async (id: number, user: UserPayload): Promise<User> => {
       email: user.email,
       project_id: Number(user.projectId),
       role: user.role,
+      is_active: user.isActive,
+      workflows_url: user.workflowsUrl,
       supervisor_id:
         user.supervisorId && user.supervisorId !== "0"
           ? Number(user.supervisorId)
           : null,
+    },
+  });
+};
+
+/**
+ * mark user as inactive
+ * @param id
+ * @returns
+ */
+export const deactivate = async (id: number): Promise<User> => {
+  return prisma.user.update({
+    where: { id },
+    data: {
+      is_active: false,
     },
   });
 };

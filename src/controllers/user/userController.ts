@@ -7,7 +7,9 @@ import {
   update as updateUserService,
   destroy as destroyUserService,
   getWithoutId as getUserWithoutIdService,
+  deactivate as deactivateUserService,
 } from "../../services/user/userService";
+import { sendAccountEmail } from "../../utils/mailer";
 
 /**
  * get all members
@@ -55,8 +57,12 @@ export const createUser = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
+  const { email, password } = req.body;
   try {
     const user = await createUserService(req.body);
+    // sendAccountEmail(email, password).catch((error) =>
+    //   console.error("Email sending failed.", error),
+    // );
     res.status(STATUS_CODES.CREATED).json(user);
   } catch (error) {
     console.error(error);
@@ -77,6 +83,21 @@ export const updateUser = async (
 ): Promise<void> => {
   try {
     const user = await updateUserService(Number(req.params.id), req.body);
+    res.status(STATUS_CODES.OK).json(user);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(STATUS_CODES.SERVER_ERROR)
+      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
+  }
+};
+
+export const deactiveUser = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const user = await deactivateUserService(Number(req.params.id));
     res.status(STATUS_CODES.OK).json(user);
   } catch (error) {
     console.error(error);
