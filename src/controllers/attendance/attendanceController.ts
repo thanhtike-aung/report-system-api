@@ -3,17 +3,19 @@ import { NextFunction, Request, Response } from "express";
 import {
   create as createAttendanceService,
   get as getAttendanceService,
+  getById as getAttendanceByIdService,
   getByToday as getTodayAttendanceService,
+  getByIdAndDate as getAttendanceByIdAndDateService,
 } from "../../services/attendance/attendanceService";
 import { NotFoundError } from "../../utils/errors";
 import { get as getAllUsers } from "../../services/user/userService";
 import {
+  sendAttendanceReminderToTeams,
   sendAttendanceToTeams as sendAttendanceToTeamsUtils,
-  sendNoReportedUsersToTeams,
-} from "../../utils/sendToTeams";
+} from "../../utils/attendance/sendToTeams";
 
 const MAX_RETRIES = 3;
-const RETRY_DELAY_MS = 1 * 60 * 1000;
+const RETRY_DELAY_MS = 5 * 60 * 1000;
 
 /**
  *
@@ -27,6 +29,49 @@ export const getAttendances = async (
   try {
     const attendances = await getAttendanceService();
     res.status(STATUS_CODES.OK).json(attendances);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(STATUS_CODES.SERVER_ERROR)
+      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
+  }
+};
+
+/**
+ *
+ * @param req
+ * @param res
+ */
+export const getAttendanceById = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const attendance = await getAttendanceByIdService(Number(req.params.id));
+    res.status(STATUS_CODES.OK).json(attendance);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(STATUS_CODES.SERVER_ERROR)
+      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
+  }
+};
+
+/**
+ *
+ * @param req
+ * @param res
+ */
+export const getAttendanceByIdAndDate = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const attendance = await getAttendanceByIdAndDateService(
+      Number(req.params.id),
+      req.params.date,
+    );
+    res.status(STATUS_CODES.OK).json(attendance);
   } catch (error) {
     console.error(error);
     res
@@ -123,7 +168,7 @@ export const sendAttendanceToTeams = async (): Promise<void> => {
 
       if (users.length !== attendances.length) {
         const notReportedUsers = getNotReportedUsers(users, attendances);
-        await sendNoReportedUsersToTeams(notReportedUsers);
+        await sendAttendanceReminderToTeams(notReportedUsers);
         throw new Error("Not all members have reported attendance!");
       }
 

@@ -1,6 +1,7 @@
 import { minutesDifferFrom } from "../../utils/dayjs";
 import {
   ATTENDANCE_STATUS,
+  LEAVE_PERIOD,
   LEAVE_REASON,
   TYPE,
   WORKING_TIME,
@@ -14,6 +15,7 @@ import {
   WorkingTime,
 } from "../../types/attendance";
 import { AttendanceStatus } from "@prisma/client";
+import dayjs from "dayjs";
 
 /**
  * Determine the leave period based on working time and leave period.
@@ -57,13 +59,47 @@ export const get = async (): Promise<Array<Attendance>> => {
 };
 
 /**
+ * get a specific attendance
+ * @param id
+ * @returns
+ */
+export const getById = async (id: number): Promise<Attendance | null> => {
+  return prisma.attendance.findFirst({
+    where: { reported_by: id },
+  });
+};
+
+/**
+ * get specific attendance by id and desired date
+ * @param id
+ * @param date
+ * @returns
+ */
+export const getByIdAndDate = async (
+  id: number,
+  date: string,
+): Promise<Attendance | null> => {
+  const startOfDay = dayjs(date).startOf("day").toDate();
+  const endOfDay = dayjs(date).endOf("day").toDate();
+  return prisma.attendance.findFirst({
+    where: {
+      reported_by: id,
+      updated_at: {
+        gte: startOfDay,
+        lt: endOfDay,
+      },
+    },
+  });
+};
+
+/**
  * Save attendance
  * @param attendance
  * @returns
  */
 export const create = async (
   attendance: CreateAttendancePayload,
-): Promise<Attendance> => {
+): Promise<Attendance | undefined> => {
   const modifiedLeavePeriod = determineLeavePeriod(
     attendance.workingTime,
     attendance.leavePeriod,
@@ -75,7 +111,7 @@ export const create = async (
   const todayStart = new Date(new Date().setHours(0, 0, 0, 0));
   const todayEnd = new Date(new Date().setHours(23, 59, 59, 999));
 
-  const exisitingAttendance = await prisma.attendance.findFirst({
+  const existingAttendance = await prisma.attendance.findFirst({
     where: {
       reported_by: attendance.reportedBy,
       created_at: {
@@ -108,14 +144,56 @@ export const create = async (
   };
 
   /* NOTE: can't use upsert because there is no "id" to provided in where */
-  if (exisitingAttendance) {
-    return prisma.attendance.update({
-      where: { id: exisitingAttendance.id },
-      data: attendanceData,
+  if (existingAttendance) {
+    return prisma.$transaction(async (tx) => {
+      // for evening reporting
+      if (attendanceData.leave_period !== LEAVE_PERIOD.FULL) {
+        await tx.report.deleteMany({
+          where: {
+            user_id: attendanceData.reported_by,
+            updated_at: {
+              gte: dayjs().startOf("day").toDate(),
+              lt: dayjs().endOf("day").toDate(),
+            },
+          },
+        });
+      } else {
+        await tx.report.create({
+          data: {
+            project: attendanceData.project,
+            task_title: "",
+            task_description: "",
+            progress: 0,
+            man_hours: 0,
+            working_time: 0,
+            user_id: attendanceData.reported_by,
+          },
+        });
+      }
+      return prisma.attendance.update({
+        where: { id: existingAttendance.id },
+        data: attendanceData,
+      });
     });
   } else {
-    return prisma.attendance.create({
-      data: attendanceData,
+    return prisma.$transaction(async (tx) => {
+      // for evening reporting
+      if (attendanceData.leave_period === LEAVE_PERIOD.FULL) {
+        await tx.report.create({
+          data: {
+            project: attendanceData.project,
+            task_title: "",
+            task_description: "",
+            progress: 0,
+            man_hours: 0,
+            working_time: 0,
+            user_id: attendanceData.reported_by,
+          },
+        });
+      }
+      return tx.attendance.create({
+        data: attendanceData,
+      });
     });
   }
 };
@@ -126,14 +204,11 @@ export const create = async (
  * @returns
  */
 export const getByToday = async (): Promise<Attendance[]> => {
-  const todayStart = new Date(new Date().setHours(0, 0, 0, 0));
-  const todayEnd = new Date(new Date().setHours(23, 59, 59, 999));
-
   return await prisma.attendance.findMany({
     where: {
       updated_at: {
-        gte: todayStart,
-        lt: todayEnd,
+        gte: dayjs().startOf("day").toDate(),
+        lt: dayjs().endOf("day").toDate(),
       },
       status: ATTENDANCE_STATUS.PENDING as AttendanceStatus,
     },

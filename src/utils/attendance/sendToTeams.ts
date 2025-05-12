@@ -1,9 +1,9 @@
 import axios from "axios";
 import dayjs from "dayjs";
-import { MESSAGE } from "../constants/messages";
-import { User } from "../types/user";
-import { Attendance } from "../types/attendance";
-import { LEAVE_PERIOD, TYPE, WORKSPACE } from "../constants/attendance";
+import { MESSAGE } from "../../constants/messages";
+import { User } from "../../types/user";
+import { Attendance } from "../../types/attendance";
+import { LEAVE_PERIOD, TYPE, WORKSPACE } from "../../constants/attendance";
 
 /**
  * send attendance report to ms teams via endpoint
@@ -29,10 +29,10 @@ export const sendAttendanceToTeams = async (
 };
 
 /**
- * send reminder message for members who are not reported
+ * send reminder message for members who are not reported attendance
  * @param users
  */
-export const sendNoReportedUsersToTeams = async (
+export const sendAttendanceReminderToTeams = async (
   users: User[],
 ): Promise<void> => {
   const webhookUrl = process.env.TEAMS_WEBHOOK;
@@ -41,7 +41,7 @@ export const sendNoReportedUsersToTeams = async (
     if (!webhookUrl) {
       throw new Error(MESSAGE.ERROR.NO_TEAMS_WEBHOOK);
     }
-    const message = buildNoReportedUsersMessage(users);
+    const message = buildAttendanceReminderMessage(users);
     await axios.post(webhookUrl, message);
   } catch (error) {
     console.error(error);
@@ -102,7 +102,7 @@ const buildAttendanceCardMessage = (
  * @param noReportedUsers
  * @returns
  */
-const buildNoReportedUsersMessage = (noReportedUsers: User[]): any => {
+const buildAttendanceReminderMessage = (noReportedUsers: User[]): any => {
   const mentions = noReportedUsers.map((user) => ({
     type: "mention",
     text: `<at>${user.name}</at>`,

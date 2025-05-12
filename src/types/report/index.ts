@@ -6,9 +6,10 @@ export interface Report {
   task_title: string;
   task_description: string;
   progress: number;
-  man_hour: number;
+  man_hours: number;
+  working_time: number;
   user_id: number;
-  user: User;
+  user?: User;
 }
 
 export interface ReportPayload {
@@ -16,6 +17,7 @@ export interface ReportPayload {
   task_title: string;
   task_description: string;
   progress: number;
-  man_hour: number;
+  man_hours: number;
+  working_time: number;
   user_id: number;
 }
