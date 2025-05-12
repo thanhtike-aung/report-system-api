@@ -1,42 +1,183 @@
-import { getByToday as getTodayReports } from "../../services/report/reportService";
+import { MESSAGE, STATUS_CODES } from "../../constants/messages";
+import { NextFunction, Request, Response } from "express";
+import {
+  create as createAttendanceService,
+  get as getAttendanceService,
+  getById as getAttendanceByIdService,
+  getByToday as getTodayAttendanceService,
+  getByIdAndDate as getAttendanceByIdAndDateService,
+} from "../../services/attendance/attendanceService";
+import { NotFoundError } from "../../utils/errors";
 import { get as getAllUsers } from "../../services/user/userService";
 import {
+  sendAttendanceReminderToTeams,
   sendAttendanceToTeams as sendAttendanceToTeamsUtils,
-  sendNoReportedUsersToTeams,
-} from "../../utils/sendToTeams";
+} from "../../utils/attendance/sendToTeams";
 
-const getNotReportedUsers = (users: any[], reports: any[]) => {
-  const reportedUserIds = reports.map((report) => report.reporter?.id);
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 5 * 60 * 1000;
+
+/**
+ *
+ * @param req
+ * @param res
+ */
+export const getAttendances = async (
+  _req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const attendances = await getAttendanceService();
+    res.status(STATUS_CODES.OK).json(attendances);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(STATUS_CODES.SERVER_ERROR)
+      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
+  }
+};
+
+/**
+ *
+ * @param req
+ * @param res
+ */
+export const getAttendanceById = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const attendance = await getAttendanceByIdService(Number(req.params.id));
+    res.status(STATUS_CODES.OK).json(attendance);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(STATUS_CODES.SERVER_ERROR)
+      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
+  }
+};
+
+/**
+ *
+ * @param req
+ * @param res
+ */
+export const getAttendanceByIdAndDate = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const attendance = await getAttendanceByIdAndDateService(
+      Number(req.params.id),
+      req.params.date,
+    );
+    res.status(STATUS_CODES.OK).json(attendance);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(STATUS_CODES.SERVER_ERROR)
+      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
+  }
+};
+
+/**
+ *
+ * @param req
+ * @param res
+ */
+export const createAttendance = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const attendance = await createAttendanceService(req.body);
+    res.status(STATUS_CODES.CREATED).json(attendance);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(STATUS_CODES.SERVER_ERROR)
+      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
+  }
+};
+
+/**
+ * get attendance by date
+ * @param req
+ * @param res
+ */
+export const getAttendanceByDate = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const attendance = await getTodayAttendanceService();
+    if (!attendance)
+      throw NotFoundError("Attendance " + MESSAGE.ERROR.NOT_FOUND);
+
+    res.status(STATUS_CODES.OK).json(attendance);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(STATUS_CODES.SERVER_ERROR)
+      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
+  }
+};
+
+/**
+ * get users who didn't report
+ * @param users
+ * @param reports
+ * @returns
+ */
+const getNotReportedUsers = (users: any[], attendances: any[]) => {
+  const reportedUserIds = attendances.map(
+    (attendance) => attendance.reporter?.id,
+  );
   return users.filter((user) => !reportedUserIds.includes(user.id));
 };
 
+/**
+ * retry mechanism
+ * @param retryCount
+ */
+const handleRetryDelay = async (retryCount: number) => {
+  if (retryCount < MAX_RETRIES) {
+    console.log("Retrying...");
+    await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+  } else {
+    console.error("Maximum retry limit reached!");
+  }
+};
+
+/**
+ * send attendance to microsoft teams channel
+ */
 export const sendAttendanceToTeams = async (): Promise<void> => {
-  const MAX_RETRIES = 5;
-  const RETRY_DELAY_MS = 15 * 60 * 1000;
+  let retryCount = 0;
+  let isSuccess = false;
 
-  for (let retryCount = 1; retryCount <= MAX_RETRIES; retryCount++) {
-    console.log(`Attempt ${retryCount}/${MAX_RETRIES}`);
+  while (retryCount <= MAX_RETRIES && !isSuccess) {
     try {
-      const users = await getAllUsers();
-      const reports = await getTodayReports();
+      console.log(
+        `Attempting cron job (Attempt ${retryCount}/${MAX_RETRIES}) ...`,
+      );
 
-      if (users.length !== reports.length) {
-        const notReportedUsers = getNotReportedUsers(users, reports);
-        await sendNoReportedUsersToTeams(notReportedUsers);
+      const users = await getAllUsers();
+      const attendances = await getTodayAttendanceService();
+
+      if (users.length !== attendances.length) {
+        const notReportedUsers = getNotReportedUsers(users, attendances);
+        await sendAttendanceReminderToTeams(notReportedUsers);
         throw new Error("Not all members have reported attendance!");
       }
 
-      await sendAttendanceToTeamsUtils(reports, users.length);
-      console.log("Attendance sent successfully!");
-      return;
+      await sendAttendanceToTeamsUtils(attendances, users.length);
+      isSuccess = true;
     } catch (error) {
-      console.error(`Error on attempt ${retryCount}:`, error);
-      if (retryCount < MAX_RETRIES) {
-        console.log(`Retrying in ${RETRY_DELAY_MS / 1000} seconds...`);
-        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
-      } else {
-        console.error("Maximum retry limit reached. Exiting.");
-      }
+      console.error(error);
+      retryCount++;
+      await handleRetryDelay(retryCount);
     }
   }
 };

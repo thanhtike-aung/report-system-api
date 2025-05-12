@@ -4,29 +4,34 @@ generator client {
 
 datasource db {
   provider = "mysql"
-  url      = "mysql://root:root@localhost:3306/mtm-report"
+  url      = "mysql://root:root@localhost:3308/dev02_report_sys"
 }
 
 model User {
-  id              Int @id @default(autoincrement())
-  name            String
-  email           String  @unique
-  password        String
-  role            Role
-  supervisor_id   Int?
-  supervisor      User? @relation("UserToSupervisor", fields: [supervisor_id], references: [id])
-  subordinates    User[] @relation("UserToSupervisor")
-  report_reported Report[] @relation(name: "ReporterRelation")
-  report_created  Report[] @relation(name: "CreatorRelation")
-  project_id      Int
-  project         Project @relation(fields: [project_id], references: [id])
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @default(now())
+  id                  Int @id @default(autoincrement())
+  name                String
+  email               String  @unique
+  password            String
+  role                Role
+  is_active           Boolean @default(true)
+  workflows_url       String? @db.VarChar(255)
+  can_report          Boolean @default(false)
+  supervisor_id       Int?
+  supervisor          User? @relation("UserToSupervisor", fields: [supervisor_id], references: [id])
+  subordinates        User[] @relation("UserToSupervisor")
+  attendance_reported Attendance[] @relation(name: "ReporterRelation")
+  attendance_created  Attendance[] @relation(name: "CreatorRelation")
+  reports             Report[]
+  project_id          Int
+  project             Project @relation(fields: [project_id], references: [id])
+  adaptive_cards      AdaptiveCardMessage[]
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @default(now())
 }
 
-model Report {
+model Attendance {
   id            Int @id @default(autoincrement())
-  type          ReportType
+  type          AttendanceType
   workspace     WorkSpace?
   project       String
   leave_period  LeavePeriod?
@@ -34,7 +39,7 @@ model Report {
   late_minute   Int?
   reported_by   Int
   reporter      User  @relation(name: "ReporterRelation", fields: [reported_by], references: [id])
-  status        ReportStatus
+  status        AttendanceStatus
   created_by    Int
   creator       User  @relation(name: "CreatorRelation", fields: [created_by], references: [id])
   created_at    DateTime  @default(now())
@@ -44,18 +49,35 @@ model Report {
 model Project {
   id          Int @id @default(autoincrement())
   name        String
+  color       String @default("#5b87ff")
   users       User[]
   created_at  DateTime @default(now())
   updated_at  DateTime @default(now())
 }
 
-model Attendance {
-  id          Int @id @default(autoincrement())
-  content     String
-  created_at  DateTime @default(now())
+model Report {
+  id                Int @id @default(autoincrement())
+  project           String
+  task_title        String
+  task_description  String
+  progress          Int
+  man_hours         Int
+  working_time      Int
+  user              User @relation(fields: [user_id], references: [id])
+  user_id           Int
+  created_at        DateTime @default(now())
+  updated_at        DateTime  @default(now())
 }
 
-enum ReportType {
+model AdaptiveCardMessage {
+  id            Int @id @default(autoincrement())
+  card_message  String @db.LongText
+  user          User @relation(fields: [user_id], references: [id])
+  user_id       Int
+  created_at    DateTime @default(now())
+}
+
+enum AttendanceType {
   working
   leave
 }
@@ -71,7 +93,7 @@ enum LeavePeriod {
   evening
 }
 
-enum ReportStatus {
+enum AttendanceStatus {
   pending
   reported
   failed

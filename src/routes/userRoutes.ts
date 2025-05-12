@@ -1,5 +1,6 @@
 import {
   createUser,
+  deactiveUser,
   deleteUser,
   getUser,
   getUserById,
@@ -18,4 +19,5 @@ export const setUserRoutes = (app: Router) => {
   app.patch("/users/:id", updateUser);
   app.delete("/users/:id", deleteUser);
   app.get("/users/not/:id", getUsersExceptId);
+  app.patch("/users/:id/deactivate", deactiveUser);
 };

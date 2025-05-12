@@ -1,4 +1,4 @@
-import { User, UserPayload } from "types/user";
+import { User, UserPayload, UserRole } from "types/user";
 import prisma from "../../lib/prisma";
 import { hash } from "bcryptjs";
 import { ROOT_ADMIN_ID } from "../../constants/common";
@@ -16,6 +16,15 @@ export const get = async (): Promise<User[]> => {
   });
 };
 
+export const getWithSubordinates = async (): Promise<User[]> => {
+  return await prisma.user.findMany({
+    where: {
+      NOT: { id: ROOT_ADMIN_ID },
+    },
+    include: { subordinates: true },
+  });
+};
+
 /**
  * get user by id
  * @returns
@@ -27,12 +36,21 @@ export const getById = async (id: number): Promise<User | null> => {
   });
 };
 
+export const getByRole = async (role: UserRole): Promise<User | null> => {
+  return await prisma.user.findFirst({
+    where: {
+      role: role,
+    },
+  });
+};
+
 /**
  * create member
  * @param user
  * @returns
  */
 export const create = async (user: UserPayload): Promise<User> => {
+  // console.log(user);
   return prisma.user.create({
     data: {
       name: user.name,
@@ -40,6 +58,8 @@ export const create = async (user: UserPayload): Promise<User> => {
       password: await hash(user.password, 10),
       project_id: Number(user.projectId),
       role: user.role,
+      is_active: user.isActive,
+      workflows_url: user.workflowsUrl === "" ? null : user.workflowsUrl,
       supervisor_id:
         user.supervisorId && user.supervisorId !== "0"
           ? Number(user.supervisorId)
@@ -60,12 +80,26 @@ export const update = async (id: number, user: UserPayload): Promise<User> => {
     data: {
       name: user.name,
       email: user.email,
-      project_id: Number(user.projectId),
+      project_id: user.projectId ? Number(user.projectId) : undefined,
       role: user.role,
-      supervisor_id:
-        user.supervisorId && user.supervisorId !== "0"
-          ? Number(user.supervisorId)
-          : null,
+      is_active: user.isActive,
+      can_report: user.canReport,
+      workflows_url: user.workflowsUrl === "" ? null : user.workflowsUrl,
+      supervisor_id: user.supervisorId ? Number(user.supervisorId) : undefined,
+    },
+  });
+};
+
+/**
+ * mark user as inactive
+ * @param id
+ * @returns
+ */
+export const deactivate = async (id: number): Promise<User> => {
+  return prisma.user.update({
+    where: { id },
+    data: {
+      is_active: false,
     },
   });
 };
@@ -94,5 +128,19 @@ export const getWithoutId = async (id: number): Promise<User[]> => {
       },
     },
     include: { project: true },
+  });
+};
+
+export const getAuthorizedReporters = async (): Promise<User[]> => {
+  return await prisma.user.findMany({
+    where: {
+      can_report: true,
+      workflows_url: {
+        not: null,
+      },
+    },
+    include: {
+      subordinates: true,
+    },
   });
 };
