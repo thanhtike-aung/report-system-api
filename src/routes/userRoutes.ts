@@ -2,8 +2,11 @@ import {
   createUser,
   deactiveUser,
   deleteUser,
+  getAuthorizedReportersWithOneWeekReports,
+  getAuthorizedReportersWithUsersAndReports,
   getUser,
   getUserById,
+  getUsersByIdsWithReport,
   getUsersExceptId,
   updateUser,
 } from "../controllers/user/userController";
@@ -15,6 +18,15 @@ export const setUserRoutes = (app: Router) => {
 
   app.get("/users", getUser);
   app.get("/users/:id", getUserById);
+  app.get(
+    "/users/authorized/reporters",
+    getAuthorizedReportersWithUsersAndReports,
+  );
+  app.get(
+    "/users/authorized/reporters/week",
+    getAuthorizedReportersWithOneWeekReports,
+  );
+  app.post("/users/report", getUsersByIdsWithReport);
   app.post("/users", createUser);
   app.patch("/users/:id", updateUser);
   app.delete("/users/:id", deleteUser);

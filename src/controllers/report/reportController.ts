@@ -6,6 +6,9 @@ import {
   get as getReportsService,
   update as updateReportsService,
   getByIdAndDate,
+  getByUserIds as getReportsByUserIdsService,
+  getOneWeekAgo as getOneWeekAgoReportsService,
+  getByIdAndWeekAgo as getReportsByIdAndWeekAgoService,
 } from "../../services/report/reportService";
 import {
   sendReportReminderToTeamsUtils,
@@ -13,7 +16,7 @@ import {
 } from "../../utils/report/sendToTeams";
 import {
   get as getAllMembers,
-  getAuthorizedReporters,
+  getOnlyAuthorizedReporters,
 } from "../../services/user/userService";
 import { User } from "types/user";
 import dayjs from "dayjs";
@@ -30,6 +33,27 @@ export const getReports = async (
 ): Promise<void> => {
   try {
     const reports = await getReportsService();
+    res.status(STATUS_CODES.OK).json(reports);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(STATUS_CODES.SERVER_ERROR)
+      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
+  }
+};
+
+export const getReportsByUserIds = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userIds = req.body.ids;
+
+    if (!Array.isArray(userIds) || userIds.some(isNaN)) {
+      throw new Error("Invalid request format.");
+    }
+
+    const reports = await getReportsByUserIdsService(userIds);
     res.status(STATUS_CODES.OK).json(reports);
   } catch (error) {
     console.error(error);
@@ -91,7 +115,7 @@ export const sendReportToTeams = async (): Promise<void> => {
   try {
     const today = dayjs().format("YYYY-MM-DD");
     const members = await getAllMembers();
-    const reportSenders = await getAuthorizedReporters();
+    const reportSenders = await getOnlyAuthorizedReporters();
     const todayAttendances = await getTodayAttendances();
     const membersGroupedBy = reportSenders.map((sender) => ({
       workflowsUrl: sender.workflows_url,
@@ -113,5 +137,36 @@ export const sendReportToTeams = async (): Promise<void> => {
     });
   } catch (error) {
     console.error(error);
+  }
+};
+
+export const getOneWeekAgoReports = async (
+  _req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const reports = await getOneWeekAgoReportsService();
+    res.status(STATUS_CODES.OK).json(reports);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(STATUS_CODES.SERVER_ERROR)
+      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
+  }
+};
+
+export const getReportsByIdAndWeekAgo = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const id = req.params.id;
+    const reports = await getReportsByIdAndWeekAgoService(Number(id));
+    res.status(STATUS_CODES.OK).json(reports);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(STATUS_CODES.SERVER_ERROR)
+      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
   }
 };

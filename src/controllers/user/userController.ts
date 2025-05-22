@@ -8,6 +8,9 @@ import {
   destroy as destroyUserService,
   getWithoutId as getUserWithoutIdService,
   deactivate as deactivateUserService,
+  getByIdsWithReport as getUsersByIdsWithReportService,
+  getAuthorizedReportersWithUsersAndReports as getAuthorizedReportersWithUsersAndReportsService,
+  getAuthorizedReportersWithOneWeekReports as getAuthorizedReportersWithOneWeekReportsService,
 } from "../../services/user/userService";
 import { sendAccountEmail } from "../../utils/mailer";
 
@@ -40,6 +43,57 @@ export const getUserById = async (
   try {
     const user = await getUserByIdService(Number(req.params.id));
     res.status(STATUS_CODES.OK).json(user);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(STATUS_CODES.SERVER_ERROR)
+      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
+  }
+};
+
+export const getUsersByIdsWithReport = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const ids = req.body.ids;
+
+    if (!Array.isArray(ids) || ids.some(isNaN)) {
+      throw new Error("Invalid request format.");
+    }
+
+    const users = await getUsersByIdsWithReportService(ids);
+    res.status(STATUS_CODES.OK).json(users);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(STATUS_CODES.SERVER_ERROR)
+      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
+  }
+};
+
+export const getAuthorizedReportersWithUsersAndReports = async (
+  _req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const users = await getAuthorizedReportersWithUsersAndReportsService();
+    res.status(STATUS_CODES.OK).json(users);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(STATUS_CODES.SERVER_ERROR)
+      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
+  }
+};
+
+export const getAuthorizedReportersWithOneWeekReports = async (
+  _req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const users = await getAuthorizedReportersWithOneWeekReportsService();
+    res.status(STATUS_CODES.OK).json(users);
   } catch (error) {
     console.error(error);
     res

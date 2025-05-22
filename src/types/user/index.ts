@@ -1,4 +1,5 @@
 import { Project } from "types/project";
+import { Report } from "types/report";
 
 export interface User {
   id: number;
@@ -13,6 +14,7 @@ export interface User {
   project_id: number;
   project?: Project;
   subordinates?: any;
+  reports?: Report[];
 }
 
 export type UserRole =

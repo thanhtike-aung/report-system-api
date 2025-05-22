@@ -58,7 +58,7 @@ export const buildReportReminderMessageCard = (): any => ({
 });
 
 type ReportBlock = {
-  type: "manager" | "header" | "project" | "task" | "footer" | "seperator";
+  type: "manager" | "header" | "project" | "task" | "footer" | "separator";
   content?: string;
   managerInfo?: { email: string; name: string };
 };
@@ -125,7 +125,7 @@ export const buildReportMessageStructureBlocks = (
 
   Object.values(users).forEach((user: any, index: number) => {
     if (index > 0) {
-      blocks.push({ type: "seperator", content: "" });
+      blocks.push({ type: "separator", content: "" });
     }
     blocks.push({ type: "project", content: `◆ ${user.name}` });
     blocks.push({
@@ -222,10 +222,10 @@ export const buildReportMessageCard = (blocks: ReportBlock[]): any => {
           spacing: "Medium",
           isSubtle: true,
         };
-      case "seperator":
+      case "separator":
         return {
           type: "TextBlock",
-          text: "---",
+          text: " ",
           separator: true,
           spacing: "Medium",
         };
