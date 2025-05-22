@@ -23,6 +23,45 @@ export const getByToday = async (): Promise<Array<Report>> => {
   });
 };
 
+export const getByUserIds = async (ids: number[]): Promise<Array<Report>> => {
+  return await prisma.report.findMany({
+    where: {
+      user_id: {
+        in: ids,
+      },
+    },
+  });
+};
+
+export const getOneWeekAgo = async (): Promise<Array<Report>> => {
+  const oneWeekAgo = dayjs().subtract(9, "day").toDate();
+  return await prisma.report.findMany({
+    where: {
+      updated_at: {
+        gte: oneWeekAgo,
+      },
+    },
+    include: {
+      user: true,
+    },
+    orderBy: {
+      updated_at: "desc",
+    },
+  });
+};
+
+export const getByIdAndWeekAgo = async (id: number): Promise<Array<Report>> => {
+  const weekAgo = dayjs().subtract(10, "day").toDate();
+  return prisma.report.findMany({
+    where: {
+      updated_at: {
+        lt: weekAgo,
+      },
+      user_id: id,
+    },
+  });
+};
+
 /**
  * create reports
  * @param reportPayload

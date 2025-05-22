@@ -16,9 +16,8 @@ interface EmailOptions {
 
 export const sendEmail = async (options: EmailOptions): Promise<void> => {
   try {
-    console.log(options);
     await transporter.sendMail({
-      from: `Dev02 Report System`,
+      from: `"Dev02 Report System" <${process.env.EMAIL_USER}>`,
       to: options.to,
       subject: options.subject,
       html: options.html,

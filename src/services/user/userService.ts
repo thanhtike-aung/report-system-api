@@ -2,6 +2,7 @@ import { User, UserPayload, UserRole } from "types/user";
 import prisma from "../../lib/prisma";
 import { hash } from "bcryptjs";
 import { ROOT_ADMIN_ID } from "../../constants/common";
+import dayjs from "dayjs";
 
 /**
  * get all users
@@ -44,13 +45,25 @@ export const getByRole = async (role: UserRole): Promise<User | null> => {
   });
 };
 
+export const getByIdsWithReport = async (
+  ids: number[],
+): Promise<User[] | []> => {
+  return await prisma.user.findMany({
+    where: {
+      id: {
+        in: ids,
+      },
+    },
+    include: { reports: true },
+  });
+};
+
 /**
  * create member
  * @param user
  * @returns
  */
 export const create = async (user: UserPayload): Promise<User> => {
-  // console.log(user);
   return prisma.user.create({
     data: {
       name: user.name,
@@ -131,7 +144,7 @@ export const getWithoutId = async (id: number): Promise<User[]> => {
   });
 };
 
-export const getAuthorizedReporters = async (): Promise<User[]> => {
+export const getOnlyAuthorizedReporters = async (): Promise<User[]> => {
   return await prisma.user.findMany({
     where: {
       can_report: true,
@@ -141,6 +154,66 @@ export const getAuthorizedReporters = async (): Promise<User[]> => {
     },
     include: {
       subordinates: true,
+    },
+  });
+};
+
+export const getAuthorizedReportersWithUsersAndReports = async (): Promise<
+  User[]
+> => {
+  return await prisma.user.findMany({
+    where: {
+      can_report: true,
+      workflows_url: {
+        not: null,
+      },
+    },
+    include: {
+      reports: true,
+      project: true,
+      subordinates: {
+        include: {
+          reports: true,
+          project: true,
+        },
+      },
+    },
+  });
+};
+
+export const getAuthorizedReportersWithOneWeekReports = async (): Promise<
+  User[]
+> => {
+  const oneWeekAgo = dayjs().subtract(9, "day").toDate();
+  return await prisma.user.findMany({
+    where: {
+      can_report: true,
+      workflows_url: {
+        not: null,
+      },
+    },
+    include: {
+      reports: {
+        where: {
+          updated_at: {
+            gte: oneWeekAgo,
+          },
+        },
+      },
+      subordinates: {
+        include: {
+          reports: {
+            where: {
+              updated_at: {
+                gte: oneWeekAgo,
+              },
+            },
+            include: {
+              user: true,
+            },
+          },
+        },
+      },
     },
   });
 };
