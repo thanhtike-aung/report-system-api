@@ -12,7 +12,7 @@ import jwt from "jsonwebtoken";
 export const login = async (loginPayload: LoginPayload) => {
   const user = await prisma.user.findUnique({
     where: { email: loginPayload.email },
-    include: { project: true },
+    include: { project: true, supervisor: true },
   });
 
   if (!user) {
@@ -40,6 +40,7 @@ export const login = async (loginPayload: LoginPayload) => {
       role: user.role,
       project: user.project.name,
       projectId: user.project_id,
+      supervisorRole: user.supervisor?.role,
     },
     process.env.JWT_SECRET,
     { expiresIn: "6d" },
