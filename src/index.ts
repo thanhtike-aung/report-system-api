@@ -23,7 +23,7 @@ app.use(cors());
 
 // cron: send morning attendance message to microsoft teams (08:30 am)
 cron.schedule(
-  "03 13 * * *",
+  "30 08 * * 1-5",
   () => {
     sendAttendanceToTeams();
   },
@@ -32,9 +32,9 @@ cron.schedule(
   },
 );
 
-// cron: send evening reporting reminder message to microsoft teams (04:45 pm)
+// cron: send evening reporting reminder message to microsoft teams (04:30 pm)
 cron.schedule(
-  "56 15 * * *",
+  "30 16 * * 1-5",
   () => {
     sendReportReminderToTeams();
   },
@@ -45,7 +45,7 @@ cron.schedule(
 
 // cron: send evening reporting message to microsoft teams (06:00 pm)
 cron.schedule(
-  "01 20 * * *",
+  "00 18 * * 1-5",
   () => {
     sendReportToTeams();
   },
