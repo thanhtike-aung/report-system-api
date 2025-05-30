@@ -114,9 +114,9 @@ export const createUser = async (
   const { email, password } = req.body;
   try {
     const user = await createUserService(req.body);
-    // sendAccountEmail(email, password).catch((error) =>
-    //   console.error("Email sending failed.", error),
-    // );
+    sendAccountEmail(email, password).catch((error) =>
+      console.error("Email sending failed.", error),
+    );
     res.status(STATUS_CODES.CREATED).json(user);
   } catch (error) {
     console.error(error);

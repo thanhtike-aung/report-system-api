@@ -51,7 +51,7 @@ export const getOneWeekAgo = async (): Promise<Array<Report>> => {
 };
 
 export const getByIdAndWeekAgo = async (id: number): Promise<Array<Report>> => {
-  const weekAgo = dayjs().subtract(15, "day").toDate();
+  const weekAgo = dayjs().subtract(7, "day").toDate();
   return prisma.report.findMany({
     where: {
       updated_at: {
