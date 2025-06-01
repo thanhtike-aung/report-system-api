@@ -9,7 +9,7 @@ import { LEAVE_PERIOD } from "../../constants/attendance";
 import { saveAdaptiveCardMessage } from "../../services/report/reportService";
 
 export const sendReportReminderToTeamsUtils = async (): Promise<void> => {
-  const workflowsUrl = process.env.TEAMS_WEBHOOK;
+  const workflowsUrl = process.env.EVENING_REPORT_WEBHOOK;
   if (!workflowsUrl) {
     throw new Error("There is no workflows URL provided.");
   }
@@ -49,7 +49,7 @@ export const buildReportReminderMessageCard = (): any => ({
           {
             type: "Action.OpenUrl",
             title: "Click to report",
-            url: "https://www.google.com/",
+            url: "https://dev02-report-system.vercel.app",
           },
         ],
       },
@@ -88,9 +88,9 @@ export const buildReportMessageStructureBlocks = (
     content: `\n\n${dayjs().format("YYYY-MM-DD")} の作業状況を報告させて頂きます。\n`,
   });
 
-  const leaveAttendances = attendances.filter(
-    (attendance) => attendance.leave_period === LEAVE_PERIOD.FULL,
-  );
+  // const leaveAttendances = attendances.filter(
+  //   (attendance) => attendance.leave_period === LEAVE_PERIOD.FULL,
+  // );
 
   const users: Record<string, any> = {};
   reports.forEach(

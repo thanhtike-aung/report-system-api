@@ -14,7 +14,7 @@ export const sendAttendanceToTeams = async (
   todayAttendances: Attendance[],
   totalMembers: number,
 ): Promise<void> => {
-  const webhookUrl = process.env.TEAMS_WEBHOOK;
+  const webhookUrl = process.env.MORNING_REPORT_WEBHOOK;
 
   try {
     if (!webhookUrl) {
@@ -35,7 +35,7 @@ export const sendAttendanceToTeams = async (
 export const sendAttendanceReminderToTeams = async (
   users: User[],
 ): Promise<void> => {
-  const webhookUrl = process.env.TEAMS_WEBHOOK;
+  const webhookUrl = process.env.MORNING_REPORT_WEBHOOK;
 
   try {
     if (!webhookUrl) {
@@ -146,7 +146,7 @@ const buildAttendanceReminderMessage = (noReportedUsers: User[]): any => {
             {
               type: "Action.OpenUrl",
               title: "Click to report attendance",
-              url: "https://report-system-client-ver001.vercel.app/",
+              url: "https://dev02-report-system.vercel.app",
             },
           ],
         },
