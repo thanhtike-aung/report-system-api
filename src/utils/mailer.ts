@@ -16,9 +16,6 @@ interface EmailOptions {
 
 export const sendEmail = async (options: EmailOptions): Promise<void> => {
   try {
-    console.log(process.env.EMAIL_USER);
-    console.log(process.env.EMAIL_PASSWORD);
-    console.log(options);
     await transporter.sendMail({
       from: `"Dev02 Report System" <${process.env.EMAIL_USER}>`,
       to: options.to,
@@ -44,7 +41,6 @@ export const sendAccountEmail = async (
     </ul>
     <p>Please change your password after first login.</p>
   `;
-  console.log("utils");
 
   await sendEmail({
     to: email,

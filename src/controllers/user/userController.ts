@@ -114,7 +114,6 @@ export const createUser = async (
   const { email, password } = req.body;
   try {
     const user = await createUserService(req.body);
-    console.log("controller");
     sendAccountEmail(email, password).catch((error) =>
       console.error("Email sending failed.", error),
     );
