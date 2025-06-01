@@ -44,6 +44,7 @@ export const sendAccountEmail = async (
     </ul>
     <p>Please change your password after first login.</p>
   `;
+  console.log("utils");
 
   await sendEmail({
     to: email,
