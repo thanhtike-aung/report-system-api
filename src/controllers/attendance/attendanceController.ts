@@ -15,7 +15,7 @@ import {
 } from "../../utils/attendance/sendToTeams";
 
 const MAX_RETRIES = 3;
-const RETRY_DELAY_MS = 5 * 60 * 1000;
+const RETRY_DELAY_MS = 15 * 60 * 1000;
 
 /**
  *
