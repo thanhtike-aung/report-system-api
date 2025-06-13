@@ -209,7 +209,7 @@ const generateAttendanceBlocks = (
         break;
       case "wfh":
         rightColumnText = `(${attendance.reporter?.project?.name}) ${determineWfhWorkingTime(
-          attendance.leave_period
+          attendance.leave_period,
         )}`;
         break;
       case "late":
@@ -229,9 +229,9 @@ const generateAttendanceBlocks = (
             {
               type: "TextBlock",
               text: leftColumnText,
-              wrap: true
-            }
-          ]
+              wrap: true,
+            },
+          ],
         },
         {
           type: "Column",
@@ -240,11 +240,11 @@ const generateAttendanceBlocks = (
             {
               type: "TextBlock",
               text: rightColumnText,
-              horizontalAlignment: "Right"
-            }
-          ]
-        }
-      ]
+              horizontalAlignment: "Right",
+            },
+          ],
+        },
+      ],
     };
   });
 };
@@ -324,7 +324,7 @@ const createAdaptiveCard = (
             {
               type: "TextBlock",
               text: "以上です。よろしくお願いいたします。",
-            }
+            },
           ],
         },
       },

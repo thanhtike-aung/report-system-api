@@ -59,11 +59,11 @@ export const buildReportReminderMessageCard = (): any => ({
               text: "<at>everyone</at>",
               mentioned: {
                 id: "everyone",
-                name: "everyone"
-              }
-            }
-          ]
-        }
+                name: "everyone",
+              },
+            },
+          ],
+        },
       },
     },
   ],

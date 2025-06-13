@@ -166,11 +166,13 @@ export const sendAttendanceToTeams = async (): Promise<void> => {
 
       const users = await getAllUsers();
       const attendances = await getTodayAttendanceService();
-      const sortedAttendances = attendances.sort((a: Attendance, b: Attendance) => {
-        const nameA = a.reporter?.project?.name ?? "";
-        const nameB = b.reporter?.project?.name ?? "";
-        return nameA.localeCompare(nameB);
-      });
+      const sortedAttendances = attendances.sort(
+        (a: Attendance, b: Attendance) => {
+          const nameA = a.reporter?.project?.name ?? "";
+          const nameB = b.reporter?.project?.name ?? "";
+          return nameA.localeCompare(nameB);
+        },
+      );
 
       if (users.length !== sortedAttendances.length) {
         const notReportedUsers = getNotReportedUsers(users, attendances);
