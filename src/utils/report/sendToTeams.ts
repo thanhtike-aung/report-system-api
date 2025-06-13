@@ -40,7 +40,7 @@ export const buildReportReminderMessageCard = (): any => ({
             inlines: [
               {
                 type: "TextRun",
-                text: "ရုံးဆင်းပါတော့မယ်။ 🏃‍♂️‍➡️\nမိတ်ဆွေ report တင်ပြီးပြီလား။ 🤗",
+                text: "<at>everyone</at> ရုံးဆင်းပါတော့မယ်။ 🏃‍♂️‍➡️\nမိတ်ဆွေ report တင်ပြီးပြီလား။ 🤗",
               },
             ],
           },
@@ -52,6 +52,18 @@ export const buildReportReminderMessageCard = (): any => ({
             url: "https://dev02-report-system.vercel.app",
           },
         ],
+        msteams: {
+          entities: [
+            {
+              type: "mention",
+              text: "<at>everyone</at>",
+              mentioned: {
+                id: "everyone",
+                name: "everyone"
+              }
+            }
+          ]
+        }
       },
     },
   ],
@@ -163,7 +175,7 @@ export const buildReportMessageStructureBlocks = (
 
   blocks.push({
     type: "footer",
-    content: "以上です。宜しくお願い致します",
+    content: "以上です。よろしくお願いいたします。",
   });
   return blocks;
 };
