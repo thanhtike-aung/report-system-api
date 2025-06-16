@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 import prisma from "../../lib/prisma";
-import { Report, ReportPayload } from "../../types/report";
+import { Report, ReportPayload, ReportStatus } from "../../types/report";
 
 /**
  * get all reports
@@ -62,32 +62,6 @@ export const getByIdAndWeekAgo = async (id: number): Promise<Array<Report>> => {
   });
 };
 
-/**
- * create reports
- * @param reportPayload
- * @returns
- */
-export const create = async (
-  reportPayload: ReportPayload[],
-): Promise<{ count: number }> => {
-  return await prisma.report.createMany({
-    data: reportPayload,
-    skipDuplicates: false,
-  });
-};
-
-/**
- * update reports
- * @param reportPayload
- * @returns
- */
-export const update = async (
-  reportPayload: ReportPayload[],
-): Promise<{ count: number }> => {
-  return await prisma.report.updateMany({
-    data: reportPayload,
-  });
-};
 
 export const getByIdAndDate = async (
   ids: any[],
@@ -111,6 +85,62 @@ export const getByIdAndDate = async (
       },
     },
   });
+};
+
+export const getTodayByUserIdAndStatus = async (
+  userId: number,
+  status: ReportStatus,
+): Promise<any> => {
+  const startOfDay = dayjs(new Date()).startOf("day").toDate();
+  const endOfDay = dayjs(new Date()).endOf("day").toDate();
+  return await prisma.report.findMany({
+    where: {
+      user_id: userId,
+      created_at: {
+        gte: startOfDay,
+        lt: endOfDay,
+      },
+      status: status,
+    },
+  });
+};
+
+/**
+ * create reports
+ * @param reportPayload
+ * @returns
+ */
+export const create = async (
+  reportPayload: ReportPayload[],
+): Promise<{ count: number }> => {
+  return await prisma.report.createMany({
+    data: reportPayload,
+    skipDuplicates: false,
+  });
+};
+
+/**
+ * update reports
+ * @param reportPayload
+ * @returns
+ */
+export const update = async (
+  userId: number,
+  reportPayload: ReportPayload[],
+): Promise<any> => {
+  return await Promise.all(reportPayload.map(async (report) => {
+    return await prisma.report.update({
+      where: { id: report.id, user_id: userId },
+        data: {
+          project: report.project,
+          task_title: report.task_title,
+          task_description: report.task_description,
+          progress: report.progress,
+          man_hours: report.man_hours,
+        },
+      });
+    })
+  );
 };
 
 export const saveAdaptiveCardMessage = async (

@@ -9,6 +9,7 @@ import {
   getByUserIds as getReportsByUserIdsService,
   getOneWeekAgo as getOneWeekAgoReportsService,
   getByIdAndWeekAgo as getReportsByIdAndWeekAgoService,
+  getTodayByUserIdAndStatus as getTodayByUserIdAndStatusService,
 } from "../../services/report/reportService";
 import {
   sendReportReminderToTeamsUtils,
@@ -21,6 +22,7 @@ import {
 import { User } from "types/user";
 import dayjs from "dayjs";
 import { getByToday as getTodayAttendances } from "../../services/attendance/attendanceService";
+import { ReportStatus } from "types/report";
 
 /**
  * get all reports
@@ -63,6 +65,24 @@ export const getReportsByUserIds = async (
   }
 };
 
+export const getTodayReportsByUserIdAndStatus = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const reports = await getTodayByUserIdAndStatusService(
+      Number(req.query.userId),
+      req.query.status as ReportStatus,
+    );
+    res.status(STATUS_CODES.OK).json(reports);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(STATUS_CODES.SERVER_ERROR)
+      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
+  }
+};
+
 /**
  * create reports
  * @param req
@@ -93,7 +113,10 @@ export const updateReports = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const updatedReportsCount = await updateReportsService(req.body);
+    const updatedReportsCount = await updateReportsService(
+      Number(req.params.userId),
+      req.body,
+    );
     res.status(STATUS_CODES.OK).json(updatedReportsCount);
   } catch (error) {
     console.error(error);

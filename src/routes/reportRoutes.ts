@@ -4,6 +4,7 @@ import {
   getReports,
   getReportsByIdAndWeekAgo,
   getReportsByUserIds,
+  getTodayReportsByUserIdAndStatus,
   updateReports,
 } from "../controllers/report/reportController";
 import { Router } from "express";
@@ -15,7 +16,8 @@ export const setReportRoutes = (app: Router) => {
   app.get("/reports", getReports);
   app.get("/reports/weekago", getOneWeekAgoReports);
   app.get("/reports/weekago/:id", getReportsByIdAndWeekAgo);
+  app.get("/reports/today", getTodayReportsByUserIdAndStatus);
   app.post("/reports/user/ids", getReportsByUserIds);
   app.post("/reports", createReports);
-  app.patch("/reports/:id", updateReports);
+  app.patch("/reports/:userId", updateReports);
 };
