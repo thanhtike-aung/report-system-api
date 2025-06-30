@@ -6,6 +6,7 @@ import {
   getById as getAttendanceByIdService,
   getByToday as getTodayAttendanceService,
   getByIdAndDate as getAttendanceByIdAndDateService,
+  saveAdaptiveCardMessage,
 } from "../../services/attendance/attendanceService";
 import { NotFoundError } from "../../utils/errors";
 import { getActiveUsers, get as getAllUsers } from "../../services/user/userService";
@@ -13,6 +14,7 @@ import {
   sendAttendanceReminderToTeams,
   sendAttendanceToTeams as sendAttendanceToTeamsUtils,
 } from "../../utils/attendance/sendToTeams";
+import { Attendance } from "types/attendance";
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 15 * 60 * 1000;
@@ -165,14 +167,21 @@ export const sendAttendanceToTeams = async (): Promise<void> => {
 
       const users = await getActiveUsers();
       const attendances = await getTodayAttendanceService();
+      const sortedAttendances = attendances.sort(
+        (a: Attendance, b: Attendance) => {
+          const nameA = a.reporter?.project?.name ?? "";
+          const nameB = b.reporter?.project?.name ?? "";
+          return nameA.localeCompare(nameB);
+        },
+      );
 
-      if (users.length !== attendances.length) {
+      if (users.length !== sortedAttendances.length) {
         const notReportedUsers = getNotReportedUsers(users, attendances);
         await sendAttendanceReminderToTeams(notReportedUsers);
         throw new Error("Not all members have reported attendance!");
       }
 
-      await sendAttendanceToTeamsUtils(attendances, users.length);
+      await sendAttendanceToTeamsUtils(sortedAttendances, users.length);
       isSuccess = true;
     } catch (error) {
       console.error(error);

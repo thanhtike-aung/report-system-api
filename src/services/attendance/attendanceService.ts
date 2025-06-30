@@ -14,7 +14,7 @@ import {
   LeavePeriod,
   WorkingTime,
 } from "../../types/attendance";
-import { AttendanceStatus } from "@prisma/client";
+import { AdaptiveCardMessageType, AttendanceStatus } from "@prisma/client";
 import dayjs from "dayjs";
 
 /**
@@ -216,6 +216,19 @@ export const getByToday = async (): Promise<Attendance[]> => {
       reporter: {
         include: { project: true },
       },
+    },
+  });
+};
+
+export const saveAdaptiveCardMessage = async (
+  messagePayload: any,
+  userId: number,
+): Promise<void> => {
+  await prisma.adaptiveCardMessage.create({
+    data: {
+      card_message: JSON.stringify(messagePayload),
+      type: AdaptiveCardMessageType.attendance,
+      user_id: userId,
     },
   });
 };
