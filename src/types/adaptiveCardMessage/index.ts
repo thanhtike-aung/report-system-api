@@ -7,3 +7,5 @@ export interface AdaptiveCardMessage {
   user?: User;
   created_at: Date;
 }
+
+export type AdaptiveCardMessageType = "attendance" | "report";
