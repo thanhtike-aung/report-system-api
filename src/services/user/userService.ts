@@ -17,6 +17,16 @@ export const get = async (): Promise<User[]> => {
   });
 };
 
+export const getActiveUsers = async (): Promise<User[]> => {
+  return await prisma.user.findMany({
+    where: {
+      NOT: { id: ROOT_ADMIN_ID },
+      is_active: true,
+    },
+    include: { project: true, supervisor: true },
+  });
+};
+
 export const getWithSubordinates = async (): Promise<User[]> => {
   return await prisma.user.findMany({
     where: {
