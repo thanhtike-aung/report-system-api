@@ -43,9 +43,9 @@ cron.schedule(
   },
 );
 
-// cron: send evening reporting message to microsoft teams (06:00 pm)
+// cron: send evening reporting message to microsoft teams (06:30 pm)
 cron.schedule(
-  "00 18 * * 1-5",
+  "30 18 * * 1-5",
   () => {
     sendReportToTeams();
   },

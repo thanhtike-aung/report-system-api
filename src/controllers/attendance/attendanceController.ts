@@ -9,7 +9,7 @@ import {
   saveAdaptiveCardMessage,
 } from "../../services/attendance/attendanceService";
 import { NotFoundError } from "../../utils/errors";
-import { get as getAllUsers } from "../../services/user/userService";
+import { getActiveUsers, get as getAllUsers } from "../../services/user/userService";
 import {
   sendAttendanceReminderToTeams,
   sendAttendanceToTeams as sendAttendanceToTeamsUtils,
@@ -165,7 +165,7 @@ export const sendAttendanceToTeams = async (): Promise<void> => {
         `Attempting cron job (Attempt ${retryCount}/${MAX_RETRIES}) ...`,
       );
 
-      const users = await getAllUsers();
+      const users = await getActiveUsers();
       const attendances = await getTodayAttendanceService();
       const sortedAttendances = attendances.sort(
         (a: Attendance, b: Attendance) => {
