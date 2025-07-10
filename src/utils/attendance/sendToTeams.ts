@@ -4,6 +4,7 @@ import { MESSAGE } from "../../constants/messages";
 import { User } from "../../types/user";
 import { Attendance } from "../../types/attendance";
 import { LEAVE_PERIOD, TYPE, WORKSPACE } from "../../constants/attendance";
+import { saveAdaptiveCardMessage } from "../../services/attendance/attendanceService";
 
 /**
  * send attendance report to ms teams via endpoint
@@ -21,6 +22,7 @@ export const sendAttendanceToTeams = async (
       throw new Error(MESSAGE.ERROR.NO_TEAMS_WEBHOOK);
     }
     const message = buildAttendanceCardMessage(todayAttendances, totalMembers);
+    await saveAdaptiveCardMessage(message, 1);
     await axios.post(webhookUrl, message);
     console.info("Attendance report sent to Microsoft Teams successfully!");
   } catch (error) {
@@ -187,44 +189,65 @@ const generateAttendanceBlocks = (
   type: string,
   offset: number = 0,
 ) => {
-  const SPACES = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
-
   const determineWfhWorkingTime = (leavePeriod: string | null): string => {
     if (!leavePeriod) return "";
-
     return leavePeriod === LEAVE_PERIOD.MORNING ? "【evening】" : "【morning】";
   };
 
   return attendances.map((attendance, index) => {
-    const baseText = `${index + 1 + offset}. ${attendance.reporter?.name} ${SPACES}`;
+    const leftColumnText = `${index + 1 + offset}. ${attendance.reporter?.name}`;
+    let rightColumnText = "";
+
     switch (type) {
       case "office":
-        return {
-          type: "TextBlock",
-          text: `${baseText}(${attendance.reporter?.project?.name})`,
-        };
+        rightColumnText = `(${attendance.reporter?.project?.name})`;
+        break;
       case "leave":
-        return {
-          type: "TextBlock",
-          text: `${baseText} (${attendance.leave_reason}) ${
-            attendance.leave_period !== LEAVE_PERIOD.FULL
-              ? `【 ${attendance.leave_period} 】`
-              : ""
-          }`,
-        };
+        rightColumnText = `(${attendance.leave_reason}) ${
+          attendance.leave_period !== LEAVE_PERIOD.FULL
+            ? `【 ${attendance.leave_period} 】`
+            : ""
+        }`;
+        break;
       case "wfh":
-        return {
-          type: "TextBlock",
-          text: `${baseText}(${attendance.reporter?.project?.name}) ${determineWfhWorkingTime(attendance.leave_period)}`,
-        };
+        rightColumnText = `(${attendance.reporter?.project?.name}) ${determineWfhWorkingTime(
+          attendance.leave_period,
+        )}`;
+        break;
       case "late":
-        return {
-          type: "TextBlock",
-          text: `${baseText}(${attendance.late_minute}min)`,
-        };
+        rightColumnText = `(${attendance.late_minute}min)`;
+        break;
       default:
         return {};
     }
+
+    return {
+      type: "ColumnSet",
+      columns: [
+        {
+          type: "Column",
+          width: "stretch",
+          items: [
+            {
+              type: "TextBlock",
+              text: leftColumnText,
+              wrap: true,
+            },
+          ],
+        },
+        {
+          type: "Column",
+          width: "auto",
+          items: [
+            {
+              type: "TextBlock",
+              text: rightColumnText,
+              horizontalAlignment: "Right",
+            },
+          ],
+        },
+      ],
+    };
   });
 };
 
@@ -271,7 +294,7 @@ const createAdaptiveCard = (
             },
             {
               type: "TextBlock",
-              text: "▼ オフィス勤務",
+              text: `▼ オフィス勤務 (${officeMemberAttendance.length}名)`,
               weight: "Bolder",
             },
             ...officeMemberAttendance,
@@ -280,7 +303,7 @@ const createAdaptiveCard = (
               text:
                 wfhMemberAttendance.length === 0
                   ? "▼ 在宅勤務 : 無し"
-                  : "▼ 在宅勤務",
+                  : `▼ 在宅勤務 (${wfhMemberAttendance.length}名)`,
               weight: "Bolder",
             },
             ...wfhMemberAttendance,
@@ -300,6 +323,10 @@ const createAdaptiveCard = (
                   : `遅刻： ${lateMembersCount}名`,
             },
             ...lateMemberAttendance,
+            {
+              type: "TextBlock",
+              text: "以上です。よろしくお願いいたします。",
+            },
           ],
         },
       },
