@@ -61,7 +61,7 @@ model Report {
   task_title        String
   task_description  String
   progress          Int
-  man_hours         Int
+  man_hours         Float
   working_time      Int
   user              User @relation(fields: [user_id], references: [id])
   user_id           Int
