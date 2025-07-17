@@ -121,27 +121,66 @@ export const create = async (
 };
 
 /**
- * update reports
- * @param reportPayload
- * @returns
+ * Check if a report exists for a specific user for today
+ * @param userId 
+ * @returns boolean
+ */
+export const checkExistingReport = async (userId: number): Promise<boolean> => {
+  const startOfDay = dayjs().startOf("day").toDate();
+  const endOfDay = dayjs().endOf("day").toDate();
+  
+  const existingReport = await prisma.report.findFirst({
+    where: {
+      user_id: userId,
+      created_at: {
+        gte: startOfDay,
+        lt: endOfDay,
+      },
+    },
+  });
+  
+  return !!existingReport;
+};
+
+/**
+ * Update reports for a specific day by deleting existing ones and inserting new data
+ * @param userId 
+ * @param reportPayload 
+ * @returns 
  */
 export const update = async (
   userId: number,
   reportPayload: ReportPayload[],
 ): Promise<any> => {
-  return await Promise.all(reportPayload.map(async (report) => {
-    return await prisma.report.update({
-      where: { id: report.id, user_id: userId },
-        data: {
-          project: report.project,
-          task_title: report.task_title,
-          task_description: report.task_description,
-          progress: report.progress,
-          man_hours: report.man_hours,
-        },
-      });
-    })
-  );
+  // Delete all reports for this user for today
+  const startOfDay = dayjs().startOf("day").toDate();
+  const endOfDay = dayjs().endOf("day").toDate();
+
+  await prisma.report.deleteMany({
+    where: {
+      user_id: userId,
+      created_at: {
+        gte: startOfDay,
+        lt: endOfDay,
+      },
+    },
+  });
+
+  // Prepare all reports for insertion
+  const reportsToInsert = reportPayload.map(({ id,...report }) => ({
+    ...report,
+    user_id: userId,
+  }));
+
+  // Insert all reports
+  const createResult = await prisma.report.createMany({
+    data: reportsToInsert,
+    skipDuplicates: false,
+  });
+
+  return {
+    created: createResult.count
+  };
 };
 
 export const saveAdaptiveCardMessage = async (

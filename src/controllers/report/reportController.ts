@@ -10,6 +10,7 @@ import {
   getOneWeekAgo as getOneWeekAgoReportsService,
   getByIdAndWeekAgo as getReportsByIdAndWeekAgoService,
   getTodayByUserIdAndStatus as getTodayByUserIdAndStatusService,
+  checkExistingReport as checkExistingReportService,
 } from "../../services/report/reportService";
 import {
   sendReportReminderToTeamsUtils,
@@ -23,6 +24,7 @@ import { User } from "types/user";
 import dayjs from "dayjs";
 import { getByToday as getTodayAttendances } from "../../services/attendance/attendanceService";
 import { ReportStatus } from "types/report";
+import { ReportPayload } from "types/report";
 
 /**
  * get all reports
@@ -93,6 +95,20 @@ export const createReports = async (
   res: Response,
 ): Promise<void> => {
   try {
+    const reports = req.body as ReportPayload[];
+    const userIds = [...new Set(reports.map(report => report.user_id))];
+    
+    for (const userId of userIds) {
+      const hasExistingReport = await checkExistingReportService(userId);
+      if (hasExistingReport) {
+        res.status(STATUS_CODES.BAD_REQUEST).json({
+          message:
+            "Report for today already exists. You cannot create multiple reports for the same day.",
+        });
+        return;
+      }
+    }
+
     const createdReportsCount = await createReportsService(req.body);
     res.status(STATUS_CODES.OK).json(createdReportsCount);
   } catch (error) {
