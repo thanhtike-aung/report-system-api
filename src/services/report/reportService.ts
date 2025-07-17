@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import prisma from "../../lib/prisma";
 import { Report, ReportPayload, ReportStatus } from "../../types/report";
+import { AdaptiveCardMessageType } from "@prisma/client";
 
 /**
  * get all reports
@@ -154,6 +155,7 @@ export const saveAdaptiveCardMessage = async (
     await prisma.adaptiveCardMessage.create({
       data: {
         card_message: JSON.stringify(messagePayload),
+        type: AdaptiveCardMessageType.report,
         user_id: userId,
       },
     });

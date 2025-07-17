@@ -4,6 +4,7 @@ import { MESSAGE } from "../../constants/messages";
 import { User } from "../../types/user";
 import { Attendance } from "../../types/attendance";
 import { LEAVE_PERIOD, TYPE, WORKSPACE } from "../../constants/attendance";
+import { saveAdaptiveCardMessage } from "../../services/attendance/attendanceService";
 
 /**
  * send attendance report to ms teams via endpoint
@@ -21,6 +22,7 @@ export const sendAttendanceToTeams = async (
       throw new Error(MESSAGE.ERROR.NO_TEAMS_WEBHOOK);
     }
     const message = buildAttendanceCardMessage(todayAttendances, totalMembers);
+    await saveAdaptiveCardMessage(message, 1);
     await axios.post(webhookUrl, message);
     console.info("Attendance report sent to Microsoft Teams successfully!");
   } catch (error) {

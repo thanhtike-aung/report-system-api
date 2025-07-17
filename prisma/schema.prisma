@@ -61,7 +61,7 @@ model Report {
   task_title        String
   task_description  String
   progress          Int
-  man_hours         Int
+  man_hours         Float
   working_time      Int
   status            Status @default(pending)
   user              User @relation(fields: [user_id], references: [id])
@@ -73,6 +73,7 @@ model Report {
 model AdaptiveCardMessage {
   id            Int @id @default(autoincrement())
   card_message  String @db.LongText
+  type          AdaptiveCardMessageType
   user          User @relation(fields: [user_id], references: [id])
   user_id       Int
   created_at    DateTime @default(now())
@@ -107,6 +108,11 @@ enum Role {
   leader
   subleader
   member
+}
+
+enum AdaptiveCardMessageType {
+  attendance
+  report
 }
 
 enum Status {
