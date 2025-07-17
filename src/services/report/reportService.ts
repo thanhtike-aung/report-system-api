@@ -63,7 +63,6 @@ export const getByIdAndWeekAgo = async (id: number): Promise<Array<Report>> => {
   });
 };
 
-
 export const getByIdAndDate = async (
   ids: any[],
   date: string,
@@ -122,13 +121,13 @@ export const create = async (
 
 /**
  * Check if a report exists for a specific user for today
- * @param userId 
+ * @param userId
  * @returns boolean
  */
 export const checkExistingReport = async (userId: number): Promise<boolean> => {
   const startOfDay = dayjs().startOf("day").toDate();
   const endOfDay = dayjs().endOf("day").toDate();
-  
+
   const existingReport = await prisma.report.findFirst({
     where: {
       user_id: userId,
@@ -138,15 +137,15 @@ export const checkExistingReport = async (userId: number): Promise<boolean> => {
       },
     },
   });
-  
+
   return !!existingReport;
 };
 
 /**
  * Update reports for a specific day by deleting existing ones and inserting new data
- * @param userId 
- * @param reportPayload 
- * @returns 
+ * @param userId
+ * @param reportPayload
+ * @returns
  */
 export const update = async (
   userId: number,
@@ -167,7 +166,7 @@ export const update = async (
   });
 
   // Prepare all reports for insertion
-  const reportsToInsert = reportPayload.map(({ id,...report }) => ({
+  const reportsToInsert = reportPayload.map(({ id, ...report }) => ({
     ...report,
     user_id: userId,
   }));
@@ -179,7 +178,7 @@ export const update = async (
   });
 
   return {
-    created: createResult.count
+    created: createResult.count,
   };
 };
 

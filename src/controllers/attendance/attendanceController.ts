@@ -9,7 +9,10 @@ import {
   saveAdaptiveCardMessage,
 } from "../../services/attendance/attendanceService";
 import { NotFoundError } from "../../utils/errors";
-import { getActiveUsers, get as getAllUsers } from "../../services/user/userService";
+import {
+  getActiveUsers,
+  get as getAllUsers,
+} from "../../services/user/userService";
 import {
   sendAttendanceReminderToTeams,
   sendAttendanceToTeams as sendAttendanceToTeamsUtils,

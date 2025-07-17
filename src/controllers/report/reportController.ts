@@ -96,8 +96,8 @@ export const createReports = async (
 ): Promise<void> => {
   try {
     const reports = req.body as ReportPayload[];
-    const userIds = [...new Set(reports.map(report => report.user_id))];
-    
+    const userIds = [...new Set(reports.map((report) => report.user_id))];
+
     for (const userId of userIds) {
       const hasExistingReport = await checkExistingReportService(userId);
       if (hasExistingReport) {
