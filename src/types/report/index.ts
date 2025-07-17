@@ -23,4 +23,4 @@ export interface ReportPayload {
   user_id: number;
 }
 
-export type ReportStatus = "pending" | "success" | "failed";
+export type ReportStatus = "pending" | "success" | "failure";
