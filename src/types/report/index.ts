@@ -13,6 +13,7 @@ export interface Report {
 }
 
 export interface ReportPayload {
+  id: number;
   project: string;
   task_title: string;
   task_description: string;
@@ -21,3 +22,5 @@ export interface ReportPayload {
   working_time: number;
   user_id: number;
 }
+
+export type ReportStatus = "pending" | "success" | "failure";

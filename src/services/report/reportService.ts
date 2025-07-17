@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 import prisma from "../../lib/prisma";
-import { Report, ReportPayload } from "../../types/report";
+import { Report, ReportPayload, ReportStatus } from "../../types/report";
 import { AdaptiveCardMessageType } from "@prisma/client";
 
 /**
@@ -63,33 +63,6 @@ export const getByIdAndWeekAgo = async (id: number): Promise<Array<Report>> => {
   });
 };
 
-/**
- * create reports
- * @param reportPayload
- * @returns
- */
-export const create = async (
-  reportPayload: ReportPayload[],
-): Promise<{ count: number }> => {
-  return await prisma.report.createMany({
-    data: reportPayload,
-    skipDuplicates: false,
-  });
-};
-
-/**
- * update reports
- * @param reportPayload
- * @returns
- */
-export const update = async (
-  reportPayload: ReportPayload[],
-): Promise<{ count: number }> => {
-  return await prisma.report.updateMany({
-    data: reportPayload,
-  });
-};
-
 export const getByIdAndDate = async (
   ids: any[],
   date: string,
@@ -112,6 +85,101 @@ export const getByIdAndDate = async (
       },
     },
   });
+};
+
+export const getTodayByUserIdAndStatus = async (
+  userId: number,
+  status: ReportStatus,
+): Promise<any> => {
+  const startOfDay = dayjs(new Date()).startOf("day").toDate();
+  const endOfDay = dayjs(new Date()).endOf("day").toDate();
+  return await prisma.report.findMany({
+    where: {
+      user_id: userId,
+      created_at: {
+        gte: startOfDay,
+        lt: endOfDay,
+      },
+      status: status,
+    },
+  });
+};
+
+/**
+ * create reports
+ * @param reportPayload
+ * @returns
+ */
+export const create = async (
+  reportPayload: ReportPayload[],
+): Promise<{ count: number }> => {
+  return await prisma.report.createMany({
+    data: reportPayload,
+    skipDuplicates: false,
+  });
+};
+
+/**
+ * Check if a report exists for a specific user for today
+ * @param userId
+ * @returns boolean
+ */
+export const checkExistingReport = async (userId: number): Promise<boolean> => {
+  const startOfDay = dayjs().startOf("day").toDate();
+  const endOfDay = dayjs().endOf("day").toDate();
+
+  const existingReport = await prisma.report.findFirst({
+    where: {
+      user_id: userId,
+      created_at: {
+        gte: startOfDay,
+        lt: endOfDay,
+      },
+    },
+  });
+
+  return !!existingReport;
+};
+
+/**
+ * Update reports for a specific day by deleting existing ones and inserting new data
+ * @param userId
+ * @param reportPayload
+ * @returns
+ */
+export const update = async (
+  userId: number,
+  reportPayload: ReportPayload[],
+): Promise<any> => {
+  // Delete all reports for this user for today
+  const startOfDay = dayjs().startOf("day").toDate();
+  const endOfDay = dayjs().endOf("day").toDate();
+
+  await prisma.report.deleteMany({
+    where: {
+      user_id: userId,
+      created_at: {
+        gte: startOfDay,
+        lt: endOfDay,
+      },
+    },
+  });
+
+  // Prepare all reports for insertion
+  const reportsToInsert = reportPayload.map(({ id, ...report }) => ({
+    ...report,
+    user_id: userId,
+  }));
+
+  // Insert all reports
+  const createResult = await prisma.report.createMany({
+    data: reportsToInsert,
+    skipDuplicates: false,
+  });
+
+  return {
+    created: createResult.count,
+  };
 };
 
 export const saveAdaptiveCardMessage = async (
