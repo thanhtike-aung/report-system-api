@@ -1,66 +1,67 @@
-import { Prisma } from "@prisma/client";
-import prisma from "../../lib/prisma";
-import { Project } from "../../types/project";
+import { BaseService } from '../base.service';
+import { Project } from '../../types/models';
+import { CreateProjectRequest, UpdateProjectRequest } from '../../types/requests';
+import { NotFoundError } from '../../utils/errors/AppError';
 
-/**
- *
- * @returns
- */
-export const get = async (): Promise<Project[]> => {
-  return await prisma.project.findMany({
-    include: { users: true },
-  });
-};
+export class ProjectService extends BaseService {
+  constructor() {
+    super('project');
+  }
 
-/**
- *
- * @param id
- * @returns
- */
-export const getById = async (id: number): Promise<Project | null> => {
-  return await prisma.project.findFirst({
-    where: { id },
-  });
-};
+  async findAll(): Promise<Project[]> {
+    return this.prisma.project.findMany({
+      include: {
+        users: true
+      }
+    });
+  }
 
-/**
- *
- * @param project
- * @returns
- */
-export const create = async (
-  project: Prisma.ProjectCreateInput,
-): Promise<Project> => {
-  return await prisma.project.create({
-    data: project,
-  });
-};
+  async findById(id: number): Promise<Project> {
+    const project = await this.prisma.project.findUnique({
+      where: { id },
+      include: {
+        users: true
+      }
+    });
 
-/**
- * update project
- * @param project
- * @returns
- */
-export const update = async (
-  id: number,
-  project: { name: string },
-): Promise<Project> => {
-  return await prisma.project.update({
-    where: { id },
-    data: {
-      name: project.name,
-      updated_at: new Date().toISOString(),
-    },
-  });
-};
+    if (!project) {
+      throw new NotFoundError(`Project with id ${id} not found`);
+    }
 
-/**
- *
- * @param id
- * @returns
- */
-export const destroy = async (id: number): Promise<Project> => {
-  return await prisma.project.delete({
-    where: { id },
-  });
-};
+    return project;
+  }
+
+  async create(data: CreateProjectRequest): Promise<Project> {
+    return this.prisma.project.create({
+      data: {
+        name: data.name,
+        color: data.color || '#5b87ff'
+      },
+      include: {
+        users: true
+      }
+    });
+  }
+
+  async update(id: number, data: UpdateProjectRequest): Promise<Project> {
+    // Check if project exists
+    await this.findById(id);
+
+    return this.prisma.project.update({
+      where: { id },
+      data,
+      include: {
+        users: true
+      }
+    });
+  }
+
+  async delete(id: number): Promise<void> {
+    // Check if project exists
+    await this.findById(id);
+
+    await this.prisma.project.delete({
+      where: { id }
+    });
+  }
+}

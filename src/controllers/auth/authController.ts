@@ -1,39 +1,36 @@
-import { MESSAGE, STATUS_CODES } from "../../constants/messages";
-import { Request, Response } from "express";
-import {
-  changePassword as changePasswordService,
-  login as loginService,
-} from "../../services/auth/authService";
+import { Request, Response } from 'express';
+import { AuthService } from '../../services/auth/authService';
+import { ApiResponse } from '../../utils/response/ApiResponse';
+import { asyncHandler } from '../../middleware/asyncHandler';
+// import { validateZod } from '../../middleware/validateZod';
+// import { loginSchema, changePasswordSchema } from '../../validations/schemas';
 
-export const login = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { status, message, token } = await loginService(req.body);
-    if (status !== STATUS_CODES.OK) {
-      res.status(status).json({ message });
-    }
-    res.status(status).json(token);
-  } catch (error) {
-    console.error(error);
-    res
-      .status(STATUS_CODES.SERVER_ERROR)
-      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
-  }
-};
+export class AuthController {
+  private authService: AuthService;
 
-export const changePassword = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
-  try {
-    const { status, data, message } = await changePasswordService(req.body);
-    if (status === STATUS_CODES.UNAUTHORIZED) {
-      res.status(STATUS_CODES.UNAUTHORIZED).json({ message: message });
-    }
-    res.status(STATUS_CODES.OK).json(data);
-  } catch (error) {
-    console.error(error);
-    res
-      .status(STATUS_CODES.SERVER_ERROR)
-      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
+  constructor() {
+    this.authService = new AuthService();
   }
-};
+
+  login = asyncHandler(async (req: Request, res: Response) => {
+    const { user, token } = await this.authService.login(req.body);
+    return res.json(ApiResponse.success({ user, token }));
+  });
+
+  changePassword = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new Error('User ID not found in request');
+    }
+
+    const { oldPassword, newPassword } = req.body;
+    await this.authService.changePassword(userId, oldPassword, newPassword);
+    return res.json(ApiResponse.success({ message: 'Password changed successfully' }));
+  });
+}
+
+// Create controller instance
+const authController = new AuthController();
+
+// Export controller methods
+export const { login, changePassword } = authController;

@@ -1,211 +1,90 @@
-import { MESSAGE, STATUS_CODES } from "../../constants/messages";
-import { Request, Response } from "express";
-import {
-  create as createReportsService,
-  getByToday as getTodayReports,
-  get as getReportsService,
-  update as updateReportsService,
-  getByIdAndDate,
-  getByUserIds as getReportsByUserIdsService,
-  getOneWeekAgo as getOneWeekAgoReportsService,
-  getByIdAndWeekAgo as getReportsByIdAndWeekAgoService,
-  getTodayByUserIdAndStatus as getTodayByUserIdAndStatusService,
-  checkExistingReport as checkExistingReportService,
-} from "../../services/report/reportService";
-import {
-  sendReportReminderToTeamsUtils,
-  sendReportToTeamsUtils,
-} from "../../utils/report/sendToTeams";
-import {
-  get as getAllMembers,
-  getOnlyAuthorizedReporters,
-} from "../../services/user/userService";
-import { User } from "types/user";
-import dayjs from "dayjs";
-import { getByToday as getTodayAttendances } from "../../services/attendance/attendanceService";
-import { ReportStatus } from "types/report";
-import { ReportPayload } from "types/report";
+import { Request, Response } from 'express';
+import { BaseController } from '../base.controller';
+import { ReportService } from '../../services/report/reportService';
+import { asyncHandler } from '../../middleware/asyncHandler';
+import { ApiResponse } from '../../utils/response/ApiResponse';
+import { ReportStatus } from '../../types/models';
 
-/**
- * get all reports
- * @param _req
- * @param res
- */
-export const getReports = async (
-  _req: Request,
-  res: Response,
-): Promise<void> => {
-  try {
-    const reports = await getReportsService();
-    res.status(STATUS_CODES.OK).json(reports);
-  } catch (error) {
-    console.error(error);
-    res
-      .status(STATUS_CODES.SERVER_ERROR)
-      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
+export class ReportController extends BaseController {
+  protected service: ReportService;
+
+  constructor() {
+    super();
+    this.service = new ReportService();
   }
-};
 
-export const getReportsByUserIds = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
-  try {
+  getAll = asyncHandler(async (_req: Request, res: Response) => {
+    const reports = await this.service.findAll();
+    return res.json(ApiResponse.success(reports));
+  });
+
+  getByUserIds = asyncHandler(async (req: Request, res: Response) => {
     const userIds = req.body.ids;
-
     if (!Array.isArray(userIds) || userIds.some(isNaN)) {
-      throw new Error("Invalid request format.");
+      throw new Error('Invalid request format.');
     }
 
-    const reports = await getReportsByUserIdsService(userIds);
-    res.status(STATUS_CODES.OK).json(reports);
-  } catch (error) {
-    console.error(error);
-    res
-      .status(STATUS_CODES.SERVER_ERROR)
-      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
-  }
-};
+    const reports = await this.service.findByUserIds(userIds);
+    return res.json(ApiResponse.success(reports));
+  });
 
-export const getTodayReportsByUserIdAndStatus = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
-  try {
-    const reports = await getTodayByUserIdAndStatusService(
-      Number(req.query.userId),
-      req.query.status as ReportStatus,
-    );
-    res.status(STATUS_CODES.OK).json(reports);
-  } catch (error) {
-    console.error(error);
-    res
-      .status(STATUS_CODES.SERVER_ERROR)
-      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
-  }
-};
+  getTodayByUserIdAndStatus = asyncHandler(async (req: Request, res: Response) => {
+    const userId = parseInt(req.query.userId as string);
+    const status = req.query.status as ReportStatus;
 
-/**
- * create reports
- * @param req
- * @param res
- */
-export const createReports = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
-  try {
-    const reports = req.body as ReportPayload[];
-    const userIds = [...new Set(reports.map((report) => report.user_id))];
-
-    for (const userId of userIds) {
-      const hasExistingReport = await checkExistingReportService(userId);
-      if (hasExistingReport) {
-        res.status(STATUS_CODES.BAD_REQUEST).json({
-          message:
-            "Report for today already exists. You cannot create multiple reports for the same day.",
-        });
-        return;
-      }
+    if (!userId || !status) {
+      throw new Error('User ID and status are required');
     }
 
-    const createdReportsCount = await createReportsService(req.body);
-    res.status(STATUS_CODES.OK).json(createdReportsCount);
-  } catch (error) {
-    console.error(error);
-    res
-      .status(STATUS_CODES.SERVER_ERROR)
-      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
-  }
-};
+    const reports = await this.service.findTodayByUserIdAndStatus(userId, status);
+    return res.json(ApiResponse.success(reports));
+  });
 
-/**
- * update reports
- * @param req
- * @param res
- */
-export const updateReports = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
-  try {
-    const updatedReportsCount = await updateReportsService(
-      Number(req.params.userId),
-      req.body,
-    );
-    res.status(STATUS_CODES.OK).json(updatedReportsCount);
-  } catch (error) {
-    console.error(error);
-    res
-      .status(STATUS_CODES.SERVER_ERROR)
-      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
-  }
-};
+  create = asyncHandler(async (req: Request, res: Response) => {
+    const createdCount = await this.service.create(req.body);
+    return res.status(201).json(ApiResponse.success({ count: createdCount }));
+  });
 
-export const sendReportReminderToTeams = async (): Promise<void> => {
-  try {
-    await sendReportReminderToTeamsUtils();
-  } catch (error) {
-    console.error(error);
-  }
-};
+  update = asyncHandler(async (req: Request, res: Response) => {
+    const userId = parseInt(req.params.userId);
+    const report = await this.service.update(userId, req.body);
+    return res.json(ApiResponse.success(report));
+  });
 
-export const sendReportToTeams = async (): Promise<void> => {
-  try {
-    const today = dayjs().format("YYYY-MM-DD");
-    const members = await getAllMembers();
-    const reportSenders = await getOnlyAuthorizedReporters();
-    const todayAttendances = await getTodayAttendances();
-    const membersGroupedBy = reportSenders.map((sender) => ({
-      workflowsUrl: sender.workflows_url,
-      senderId: sender.id,
-      ids: [
-        sender.id,
-        ...sender.subordinates.map((subordinate: User) => subordinate.id),
-      ],
-    }));
-    membersGroupedBy.map(async (memberGroupedBy) => {
-      const reports = await getByIdAndDate(memberGroupedBy.ids, today);
+  getOneWeekAgo = asyncHandler(async (_req: Request, res: Response) => {
+    const reports = await this.service.findOneWeekAgo();
+    return res.json(ApiResponse.success(reports));
+  });
 
-      sendReportToTeamsUtils(
-        members,
-        reports,
-        todayAttendances,
-        memberGroupedBy,
-      );
-    });
-  } catch (error) {
-    console.error(error);
-  }
-};
+  getByIdAndWeekAgo = asyncHandler(async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id);
+    const reports = await this.service.findByIdAndWeekAgo(id);
+    return res.json(ApiResponse.success(reports));
+  });
 
-export const getOneWeekAgoReports = async (
-  _req: Request,
-  res: Response,
-): Promise<void> => {
-  try {
-    const reports = await getOneWeekAgoReportsService();
-    res.status(STATUS_CODES.OK).json(reports);
-  } catch (error) {
-    console.error(error);
-    res
-      .status(STATUS_CODES.SERVER_ERROR)
-      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
-  }
-};
+  sendToTeams = asyncHandler(async (_req: Request, res: Response) => {
+    await this.service.sendReportToTeams();
+    return res.json(ApiResponse.success({ message: 'Reports sent to Teams successfully' }));
+  });
 
-export const getReportsByIdAndWeekAgo = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
-  try {
-    const id = req.params.id;
-    const reports = await getReportsByIdAndWeekAgoService(Number(id));
-    res.status(STATUS_CODES.OK).json(reports);
-  } catch (error) {
-    console.error(error);
-    res
-      .status(STATUS_CODES.SERVER_ERROR)
-      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
-  }
-};
+  sendReminder = asyncHandler(async (_req: Request, res: Response) => {
+    await this.service.sendReportReminder();
+    return res.json(ApiResponse.success({ message: 'Report reminders sent successfully' }));
+  });
+}
+
+// Create controller instance
+const reportController = new ReportController();
+
+// Export controller methods
+export const {
+  getAll: getReports,
+  getByUserIds: getReportsByUserIds,
+  getTodayByUserIdAndStatus: getTodayReportsByUserIdAndStatus,
+  create: createReports,
+  update: updateReports,
+  getOneWeekAgo: getOneWeekAgoReports,
+  getByIdAndWeekAgo: getReportsByIdAndWeekAgo,
+  sendToTeams: sendReportToTeams,
+  sendReminder: sendReportReminder
+} = reportController;

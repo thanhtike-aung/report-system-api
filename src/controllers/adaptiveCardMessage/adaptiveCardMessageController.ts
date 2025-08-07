@@ -1,39 +1,35 @@
-import { MESSAGE, STATUS_CODES } from "../../constants/messages";
-import { Request, Response } from "express";
-import {
-  get as getAdaptiveCardMessagesService,
-  getByType as getAdaptiveCardMessagesByTypeService,
-} from "../../services/adaptiveCardMessage/adaptiveCardMessageService";
-import { AdaptiveCardMessageType } from "types/adaptiveCardMessage";
+import { Request, Response } from 'express';
+import { BaseController } from '../base.controller';
+import { AdaptiveCardMessageService } from '../../services/adaptiveCardMessage/adaptiveCardMessageService';
+import { asyncHandler } from '../../middleware/asyncHandler';
+import { ApiResponse } from '../../utils/response/ApiResponse';
+import { AdaptiveCardMessageType } from '../../types/models';
 
-export const getAdaptiveCardMessages = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
-  try {
-    const cardMessages = await getAdaptiveCardMessagesService();
-    res.status(STATUS_CODES.OK).json(cardMessages);
-  } catch (error) {
-    console.error(error);
-    res
-      .status(STATUS_CODES.SERVER_ERROR)
-      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
-  }
-};
+export class AdaptiveCardMessageController extends BaseController {
+  protected service: AdaptiveCardMessageService;
 
-export const getAdaptiveCardMessagesWithType = async (
-  req: Request,
-  res: Response,
-) => {
-  try {
-    const cardMessages = await getAdaptiveCardMessagesByTypeService(
-      req.params.type as AdaptiveCardMessageType,
-    );
-    res.status(STATUS_CODES.OK).json(cardMessages);
-  } catch (error) {
-    console.error(error);
-    res
-      .status(STATUS_CODES.SERVER_ERROR)
-      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
+  constructor() {
+    super();
+    this.service = new AdaptiveCardMessageService();
   }
-};
+
+  getAll = asyncHandler(async (_req: Request, res: Response) => {
+    const messages = await this.service.findAll();
+    return res.json(ApiResponse.success(messages));
+  });
+
+  getByType = asyncHandler(async (req: Request, res: Response) => {
+    const type = req.params.type as AdaptiveCardMessageType;
+    const messages = await this.service.findByType(type);
+    return res.json(ApiResponse.success(messages));
+  });
+}
+
+// Create controller instance
+const adaptiveCardMessageController = new AdaptiveCardMessageController();
+
+// Export controller methods
+export const {
+  getAll: getAdaptiveCardMessages,
+  getByType: getAdaptiveCardMessagesByType
+} = adaptiveCardMessageController;

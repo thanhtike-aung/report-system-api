@@ -1,67 +1,39 @@
-import express from "express";
-import dotenv from "dotenv";
-import cors from "cors";
-import cron from "node-cron";
-import { setAuthRoutes } from "./routes/authRoutes";
-import { setUserRoutes } from "./routes/userRoutes";
-import { setProjectRoutes } from "./routes/projectRoutes";
-import { setAttendanceRoutes } from "./routes/attendanceRoutes";
-import { sendAttendanceToTeams } from "./controllers/attendance/attendanceController";
-import { setReportRoutes } from "./routes/reportRoutes";
-import {
-  sendReportReminderToTeams,
-  sendReportToTeams,
-} from "./controllers/report/reportController";
-import { setAdaptiveCardMessageRoutes } from "./routes/adaptiveCardMessageRoutes";
+import 'dotenv/config';
+import { createApp } from './app';
+import { config } from './config';
+import { initializeCronJobs } from './cron';
+import logger from './utils/logger';
 
-dotenv.config();
+const startServer = async () => {
+  try {
+    const app = createApp();
 
-const app = express();
+    initializeCronJobs();
 
-app.use(express.json());
-app.use(cors());
+    app.listen(config.server.port, () => {
+      logger.info(`Server is running on port ${config.server.port} in ${config.env} mode`);
+      
+      if (config.env !== 'production') {
+        logger.info(`API Documentation available at http://localhost:${config.server.port}/api-docs`);
+      }
+    });
 
-// cron: send morning attendance message to microsoft teams (08:30 am)
-cron.schedule(
-  "30 08 * * 1-5",
-  () => {
-    sendAttendanceToTeams();
-  },
-  {
-    timezone: "Asia/Yangon",
-  },
-);
+    process.on('unhandledRejection', (err: Error) => {
+      logger.error('UNHANDLED REJECTION! 💥 Shutting down...');
+      logger.error(err.name, err.message);
+      process.exit(1);
+    });
 
-// cron: send evening reporting reminder message to microsoft teams (04:30 pm)
-cron.schedule(
-  "30 16 * * 1-5",
-  () => {
-    sendReportReminderToTeams();
-  },
-  {
-    timezone: "Asia/Yangon",
-  },
-);
+    process.on('uncaughtException', (err: Error) => {
+      logger.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
+      logger.error(err.name, err.message);
+      process.exit(1);
+    });
 
-// cron: send evening reporting message to microsoft teams (06:30 pm)
-cron.schedule(
-  "30 18 * * 1-5",
-  () => {
-    sendReportToTeams();
-  },
-  {
-    timezone: "Asia/Yangon",
-  },
-);
+  } catch (error) {
+    logger.error('Error starting server:', error);
+    process.exit(1);
+  }
+};
 
-// routing
-setAuthRoutes(app);
-setUserRoutes(app);
-setAttendanceRoutes(app);
-setReportRoutes(app);
-setProjectRoutes(app);
-setAdaptiveCardMessageRoutes(app);
-
-app.listen(process.env.NODE_PORT, () => {
-  console.info(`server is running on ${process.env.NODE_PORT}`);
-});
+startServer();

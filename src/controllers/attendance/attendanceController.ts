@@ -1,195 +1,70 @@
-import { MESSAGE, STATUS_CODES } from "../../constants/messages";
-import { NextFunction, Request, Response } from "express";
-import {
-  create as createAttendanceService,
-  get as getAttendanceService,
-  getById as getAttendanceByIdService,
-  getByToday as getTodayAttendanceService,
-  getByIdAndDate as getAttendanceByIdAndDateService,
-  saveAdaptiveCardMessage,
-} from "../../services/attendance/attendanceService";
-import { NotFoundError } from "../../utils/errors";
-import {
-  getActiveUsers,
-  get as getAllUsers,
-} from "../../services/user/userService";
-import {
-  sendAttendanceReminderToTeams,
-  sendAttendanceToTeams as sendAttendanceToTeamsUtils,
-} from "../../utils/attendance/sendToTeams";
-import { Attendance } from "types/attendance";
+import { Request, Response } from 'express';
+import { BaseController } from '../base.controller';
+import { AttendanceService } from '../../services/attendance/attendanceService';
+import { asyncHandler } from '../../middleware/asyncHandler';
+import { ApiResponse } from '../../utils/response/ApiResponse';
+import { NotFoundError } from '../../utils/errors/AppError';
 
-const MAX_RETRIES = 3;
-const RETRY_DELAY_MS = 15 * 60 * 1000;
+export class AttendanceController extends BaseController {
+  protected service: AttendanceService;
 
-/**
- *
- * @param req
- * @param res
- */
-export const getAttendances = async (
-  _req: Request,
-  res: Response,
-): Promise<void> => {
-  try {
-    const attendances = await getAttendanceService();
-    res.status(STATUS_CODES.OK).json(attendances);
-  } catch (error) {
-    console.error(error);
-    res
-      .status(STATUS_CODES.SERVER_ERROR)
-      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
+  constructor() {
+    super();
+    this.service = new AttendanceService();
   }
-};
 
-/**
- *
- * @param req
- * @param res
- */
-export const getAttendanceById = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
-  try {
-    const attendance = await getAttendanceByIdService(Number(req.params.id));
-    res.status(STATUS_CODES.OK).json(attendance);
-  } catch (error) {
-    console.error(error);
-    res
-      .status(STATUS_CODES.SERVER_ERROR)
-      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
-  }
-};
+  getAll = asyncHandler(async (_req: Request, res: Response) => {
+    const attendances = await this.service.findAll();
+    return res.json(ApiResponse.success(attendances));
+  });
 
-/**
- *
- * @param req
- * @param res
- */
-export const getAttendanceByIdAndDate = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
-  try {
-    const attendance = await getAttendanceByIdAndDateService(
-      Number(req.params.id),
-      req.params.date,
-    );
-    res.status(STATUS_CODES.OK).json(attendance);
-  } catch (error) {
-    console.error(error);
-    res
-      .status(STATUS_CODES.SERVER_ERROR)
-      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
-  }
-};
+  getById = asyncHandler(async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id);
+    const attendance = await this.service.findById(id);
+    return res.json(ApiResponse.success(attendance));
+  });
 
-/**
- *
- * @param req
- * @param res
- */
-export const createAttendance = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
-  try {
-    const attendance = await createAttendanceService(req.body);
-    res.status(STATUS_CODES.CREATED).json(attendance);
-  } catch (error) {
-    console.error(error);
-    res
-      .status(STATUS_CODES.SERVER_ERROR)
-      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
-  }
-};
+  getByIdAndDate = asyncHandler(async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id);
+    const date = req.params.date;
+    const attendances = await this.service.findByIdAndDate(id, date);
+    return res.json(ApiResponse.success(attendances));
+  });
 
-/**
- * get attendance by date
- * @param req
- * @param res
- */
-export const getAttendanceByDate = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> => {
-  try {
-    const attendance = await getTodayAttendanceService();
-    if (!attendance)
-      throw NotFoundError("Attendance " + MESSAGE.ERROR.NOT_FOUND);
-
-    res.status(STATUS_CODES.OK).json(attendance);
-  } catch (error) {
-    console.error(error);
-    res
-      .status(STATUS_CODES.SERVER_ERROR)
-      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
-  }
-};
-
-/**
- * get users who didn't report
- * @param users
- * @param reports
- * @returns
- */
-const getNotReportedUsers = (users: any[], attendances: any[]) => {
-  const reportedUserIds = attendances.map(
-    (attendance) => attendance.reporter?.id,
-  );
-  return users.filter((user) => !reportedUserIds.includes(user.id));
-};
-
-/**
- * retry mechanism
- * @param retryCount
- */
-const handleRetryDelay = async (retryCount: number) => {
-  if (retryCount < MAX_RETRIES) {
-    console.log("Retrying...");
-    await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
-  } else {
-    console.error("Maximum retry limit reached!");
-  }
-};
-
-/**
- * send attendance to microsoft teams channel
- */
-export const sendAttendanceToTeams = async (): Promise<void> => {
-  let retryCount = 0;
-  let isSuccess = false;
-
-  while (retryCount <= MAX_RETRIES && !isSuccess) {
-    try {
-      console.log(
-        `Attempting cron job (Attempt ${retryCount}/${MAX_RETRIES}) ...`,
-      );
-
-      const users = await getActiveUsers();
-      const attendances = await getTodayAttendanceService();
-      const sortedAttendances = attendances.sort(
-        (a: Attendance, b: Attendance) => {
-          const nameA = a.reporter?.project?.name ?? "";
-          const nameB = b.reporter?.project?.name ?? "";
-          return nameA.localeCompare(nameB);
-        },
-      );
-
-      if (users.length !== sortedAttendances.length) {
-        const notReportedUsers = getNotReportedUsers(users, attendances);
-        await sendAttendanceReminderToTeams(notReportedUsers);
-        throw new Error("Not all members have reported attendance!");
-      }
-
-      await sendAttendanceToTeamsUtils(sortedAttendances, users.length);
-      isSuccess = true;
-    } catch (error) {
-      console.error(error);
-      retryCount++;
-      await handleRetryDelay(retryCount);
+  getByDate = asyncHandler(async (_req: Request, res: Response) => {
+    const attendances = await this.service.findToday();
+    if (!attendances.length) {
+      throw new NotFoundError('No attendance records found for today');
     }
-  }
-};
+    return res.json(ApiResponse.success(attendances));
+  });
+
+  create = asyncHandler(async (req: Request, res: Response) => {
+    const attendance = await this.service.create(req.body);
+    return res.status(201).json(ApiResponse.success(attendance));
+  });
+
+  sendToTeams = asyncHandler(async (_req: Request, res: Response) => {
+    await this.service.sendToTeams();
+    return res.json(ApiResponse.success({ message: 'Attendance sent to Teams successfully' }));
+  });
+
+  sendReminder = asyncHandler(async (_req: Request, res: Response) => {
+    await this.service.sendReminder();
+    return res.json(ApiResponse.success({ message: 'Attendance reminders sent successfully' }));
+  });
+}
+
+// Create controller instance
+const attendanceController = new AttendanceController();
+
+// Export controller methods
+export const {
+  getAll: getAttendances,
+  getById: getAttendanceById,
+  getByIdAndDate: getAttendanceByIdAndDate,
+  getByDate: getAttendanceByDate,
+  create: createAttendance,
+  sendToTeams: sendAttendanceToTeams,
+  sendReminder: sendAttendanceReminder
+} = attendanceController;
