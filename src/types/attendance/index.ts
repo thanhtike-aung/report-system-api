@@ -9,6 +9,8 @@ export interface Attendance {
   leave_reason: LeaveReason | string | null;
   late_minute: number | null;
   reported_by: number;
+  status: AttendanceStatus;
+  created_by: number;
   reporter?: User;
 }
 
@@ -35,3 +37,5 @@ export type WorkSpace = "office" | "home";
 export type LeavePeriod = "full" | "morning" | "evening";
 
 export type LeaveReason = "sick" | "personal" | "other";
+
+export type AttendanceStatus = "pending" | "reported" | "failed";

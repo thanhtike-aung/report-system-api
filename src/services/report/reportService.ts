@@ -2,144 +2,192 @@ import dayjs from "dayjs";
 import prisma from "../../lib/prisma";
 import { Report, ReportPayload, ReportStatus } from "../../types/report";
 import { AdaptiveCardMessageType } from "@prisma/client";
+import { BaseService } from "../common/baseService";
+import { logger } from "../../utils/logger";
+import { ValidationError } from "../../utils/errors";
 
-/**
- * get all reports
- * @returns
- */
-export const get = async (): Promise<Array<Report>> => {
-  return await prisma.report.findMany({
-    include: { user: true },
-  });
-};
+class ReportService extends BaseService {
+  constructor() {
+    super(prisma);
+  }
 
-export const getByToday = async (): Promise<Array<Report>> => {
-  return await prisma.report.findMany({
-    where: {
-      updated_at: {
-        gte: dayjs().startOf("day").toDate(),
-        lt: dayjs().endOf("day").toDate(),
-      },
-    },
-  });
-};
+  /**
+   * Get all reports with user information
+   */
+  async getAllReports(): Promise<Report[]> {
+    return this.execute(async () => {
+      return await this.prisma.report.findMany({
+        include: { user: true },
+        orderBy: { updated_at: 'desc' },
+      });
+    }, 'getAllReports');
+  }
 
-export const getByUserIds = async (ids: number[]): Promise<Array<Report>> => {
-  return await prisma.report.findMany({
-    where: {
-      user_id: {
-        in: ids,
-      },
-    },
-  });
-};
+  /**
+   * Get today's reports
+   */
+  async getTodayReports(): Promise<Report[]> {
+    return this.execute(async () => {
+      const { startDate, endDate } = this.getTodayRange();
+      
+      return await this.prisma.report.findMany({
+        where: {
+          updated_at: {
+            gte: startDate,
+            lt: endDate,
+          },
+        },
+        include: { user: true },
+        orderBy: { updated_at: 'desc' },
+      });
+    }, 'getTodayReports');
+  }
 
-export const getOneWeekAgo = async (): Promise<Array<Report>> => {
-  const oneWeekAgo = dayjs().subtract(9, "day").toDate();
-  return await prisma.report.findMany({
-    where: {
-      updated_at: {
-        gte: oneWeekAgo,
-      },
-    },
-    include: {
-      user: true,
-    },
-    orderBy: {
-      updated_at: "desc",
-    },
-  });
-};
+  /**
+   * Get reports by user IDs
+   */
+  async getReportsByUserIds(userIds: number[]): Promise<Report[]> {
+    return this.execute(async () => {
+      const validIds = this.validateIds(userIds, 'User IDs');
+      
+      return await this.prisma.report.findMany({
+        where: {
+          user_id: { in: validIds },
+        },
+        include: { user: true },
+        orderBy: { updated_at: 'desc' },
+      });
+    }, 'getReportsByUserIds');
+  }
 
-export const getByIdAndWeekAgo = async (id: number): Promise<Array<Report>> => {
-  const weekAgo = dayjs().subtract(7, "day").toDate();
-  return prisma.report.findMany({
-    where: {
-      updated_at: {
-        lt: weekAgo,
-      },
-      user_id: id,
-    },
-  });
-};
+  /**
+   * Get reports from one week ago
+   */
+  async getOneWeekAgoReports(): Promise<Report[]> {
+    return this.execute(async () => {
+      const { startDate } = this.getPeriodRange(9);
+      
+      return await this.prisma.report.findMany({
+        where: {
+          updated_at: { gte: startDate },
+        },
+        include: { user: true },
+        orderBy: { updated_at: "desc" },
+      });
+    }, 'getOneWeekAgoReports');
+  }
 
-export const getByIdAndDate = async (
-  ids: any[],
-  date: string,
-): Promise<any> => {
-  const startOfDay = dayjs(date).startOf("day").toDate();
-  const endOfDay = dayjs(date).endOf("day").toDate();
-  return await prisma.report.findMany({
-    where: {
-      user_id: {
-        in: ids,
-      },
-      updated_at: {
-        gte: startOfDay,
-        lt: endOfDay,
-      },
-    },
-    include: {
-      user: {
-        include: { project: true },
-      },
-    },
-  });
-};
+  /**
+   * Get reports by user ID older than a week
+   */
+  async getReportsByIdAndWeekAgo(userId: number): Promise<Report[]> {
+    return this.execute(async () => {
+      const validUserId = this.validateId(userId, 'User ID');
+      const weekAgo = dayjs().subtract(7, "day").toDate();
+      
+      return await this.prisma.report.findMany({
+        where: {
+          updated_at: { lt: weekAgo },
+          user_id: validUserId,
+        },
+        include: { user: true },
+        orderBy: { updated_at: "desc" },
+      });
+    }, 'getReportsByIdAndWeekAgo');
+  }
 
-export const getTodayByUserIdAndStatus = async (
-  userId: number,
-  status: ReportStatus,
-): Promise<any> => {
-  const startOfDay = dayjs(new Date()).startOf("day").toDate();
-  const endOfDay = dayjs(new Date()).endOf("day").toDate();
-  return await prisma.report.findMany({
-    where: {
-      user_id: userId,
-      created_at: {
-        gte: startOfDay,
-        lt: endOfDay,
-      },
-      status: status,
-    },
-  });
-};
+  /**
+   * Get reports by user IDs and specific date
+   */
+  async getReportsByIdAndDate(userIds: number[], date: string): Promise<Report[]> {
+    return this.execute(async () => {
+      const validIds = this.validateIds(userIds, 'User IDs');
+      const { startDate, endDate } = this.getDateRange(date);
+      
+      return await this.prisma.report.findMany({
+        where: {
+          user_id: { in: validIds },
+          updated_at: {
+            gte: startDate,
+            lt: endDate,
+          },
+        },
+        include: {
+          user: {
+            include: { project: true },
+          },
+        },
+        orderBy: { updated_at: "desc" },
+      });
+    }, 'getReportsByIdAndDate');
+  }
 
-/**
- * create reports
- * @param reportPayload
- * @returns
- */
-export const create = async (
-  reportPayload: ReportPayload[],
-): Promise<{ count: number }> => {
-  return await prisma.report.createMany({
-    data: reportPayload,
-    skipDuplicates: false,
-  });
-};
+  /**
+   * Get today's reports by user ID and status
+   */
+  async getTodayReportsByUserIdAndStatus(userId: number, status: ReportStatus): Promise<Report[]> {
+    return this.execute(async () => {
+      const validUserId = this.validateId(userId, 'User ID');
+      const { startDate, endDate } = this.getTodayRange();
+      
+      return await this.prisma.report.findMany({
+        where: {
+          user_id: validUserId,
+          created_at: {
+            gte: startDate,
+            lt: endDate,
+          },
+          status: status,
+        },
+        include: { user: true },
+        orderBy: { created_at: "desc" },
+      });
+    }, 'getTodayReportsByUserIdAndStatus');
+  };
 
-/**
- * Check if a report exists for a specific user for today
- * @param userId
- * @returns boolean
- */
-export const checkExistingReport = async (userId: number): Promise<boolean> => {
-  const startOfDay = dayjs().startOf("day").toDate();
-  const endOfDay = dayjs().endOf("day").toDate();
+  /**
+   * Create multiple reports
+   */
+  async createReports(reportPayload: ReportPayload[]): Promise<{ count: number }> {
+    return this.execute(async () => {
+      if (!Array.isArray(reportPayload) || reportPayload.length === 0) {
+        throw new ValidationError('Report payload must be a non-empty array');
+      }
 
-  const existingReport = await prisma.report.findFirst({
-    where: {
-      user_id: userId,
-      created_at: {
-        gte: startOfDay,
-        lt: endOfDay,
-      },
-    },
-  });
+      logger.info('Creating reports', { count: reportPayload.length });
 
-  return !!existingReport;
-};
+      const result = await this.prisma.report.createMany({
+        data: reportPayload,
+        skipDuplicates: false,
+      });
+
+      logger.info('Reports created successfully', { created: result.count });
+      
+      return result;
+    }, 'createReports');
+  }
+
+  /**
+   * Check if a report exists for a specific user for today
+   */
+  async checkTodayReportExists(userId: number): Promise<boolean> {
+    return this.execute(async () => {
+      const validUserId = this.validateId(userId, 'User ID');
+      const { startDate, endDate } = this.getTodayRange();
+
+      const existingReport = await this.prisma.report.findFirst({
+        where: {
+          user_id: validUserId,
+          created_at: {
+            gte: startDate,
+            lt: endDate,
+          },
+        },
+      });
+
+      return !!existingReport;
+    }, 'checkTodayReportExists');
+  }
 
 /**
  * Update reports for a specific day by deleting existing ones and inserting new data
@@ -147,57 +195,88 @@ export const checkExistingReport = async (userId: number): Promise<boolean> => {
  * @param reportPayload
  * @returns
  */
-export const update = async (
-  userId: number,
-  reportPayload: ReportPayload[],
-): Promise<any> => {
-  // Delete all reports for this user for today
-  const startOfDay = dayjs().startOf("day").toDate();
-  const endOfDay = dayjs().endOf("day").toDate();
+  /**
+   * Update reports for a user (replace today's reports)
+   */
+  async updateUserReports(userId: number, reportPayload: ReportPayload[]): Promise<{ created: number }> {
+    return this.executeWithTransaction(async (tx) => {
+      const validUserId = this.validateId(userId, 'User ID');
+      
+      if (!Array.isArray(reportPayload) || reportPayload.length === 0) {
+        throw new ValidationError('Report payload must be a non-empty array');
+      }
 
-  await prisma.report.deleteMany({
-    where: {
-      user_id: userId,
-      created_at: {
-        gte: startOfDay,
-        lt: endOfDay,
-      },
-    },
-  });
+      logger.info('Updating user reports', { userId: validUserId, count: reportPayload.length });
 
-  // Prepare all reports for insertion
-  const reportsToInsert = reportPayload.map(({ id, ...report }) => ({
-    ...report,
-    user_id: userId,
-  }));
+      const { startDate, endDate } = this.getTodayRange();
 
-  // Insert all reports
-  const createResult = await prisma.report.createMany({
-    data: reportsToInsert,
-    skipDuplicates: false,
-  });
+      // Delete existing reports for today
+      await tx.report.deleteMany({
+        where: {
+          user_id: validUserId,
+          created_at: {
+            gte: startDate,
+            lt: endDate,
+          },
+        },
+      });
 
-  return {
-    created: createResult.count,
-  };
-};
+      // Prepare reports for insertion
+      const reportsToInsert = reportPayload.map(({ id, ...report }) => ({
+        ...report,
+        user_id: validUserId,
+      }));
 
-export const saveAdaptiveCardMessage = async (
-  messagePayload: any,
-  userId: number,
-): Promise<void> => {
-  try {
-    if (!messagePayload) {
-      throw new Error("Message Payload cannot be null or undefined.");
-    }
-    await prisma.adaptiveCardMessage.create({
-      data: {
-        card_message: JSON.stringify(messagePayload),
-        type: AdaptiveCardMessageType.report,
-        user_id: userId,
-      },
-    });
-  } catch (error) {
-    console.error(error);
+      // Insert new reports
+      const createResult = await tx.report.createMany({
+        data: reportsToInsert,
+        skipDuplicates: false,
+      });
+
+      logger.info('User reports updated successfully', { 
+        userId: validUserId, 
+        created: createResult.count 
+      });
+
+      return { created: createResult.count };
+    }, 'updateUserReports');
   }
-};
+
+  /**
+   * Save adaptive card message for reports
+   */
+  async saveAdaptiveCardMessage(messagePayload: any, userId: number): Promise<void> {
+    return this.execute(async () => {
+      const validUserId = this.validateId(userId, 'User ID');
+      
+      if (!messagePayload) {
+        throw new ValidationError('Message payload cannot be null or undefined');
+      }
+
+      await this.prisma.adaptiveCardMessage.create({
+        data: {
+          card_message: JSON.stringify(messagePayload),
+          type: AdaptiveCardMessageType.report,
+          user_id: validUserId,
+        },
+      });
+
+      logger.info('Adaptive card message saved', { userId: validUserId });
+    }, 'saveAdaptiveCardMessage');
+  }
+}
+
+const reportService = new ReportService();
+
+// Legacy exports for backward compatibility
+export const get = () => reportService.getAllReports();
+export const getByToday = () => reportService.getTodayReports();
+export const getByUserIds = (ids: number[]) => reportService.getReportsByUserIds(ids);
+export const getOneWeekAgo = () => reportService.getOneWeekAgoReports();
+export const getByIdAndWeekAgo = (id: number) => reportService.getReportsByIdAndWeekAgo(id);
+export const getByIdAndDate = (ids: number[], date: string) => reportService.getReportsByIdAndDate(ids, date);
+export const getTodayByUserIdAndStatus = (userId: number, status: ReportStatus) => reportService.getTodayReportsByUserIdAndStatus(userId, status);
+export const create = (payload: ReportPayload[]) => reportService.createReports(payload);
+export const update = (userId: number, payload: ReportPayload[]) => reportService.updateUserReports(userId, payload);
+export const checkExistingReport = (userId: number) => reportService.checkTodayReportExists(userId);
+export const saveAdaptiveCardMessage = (payload: any, userId: number) => reportService.saveAdaptiveCardMessage(payload, userId);

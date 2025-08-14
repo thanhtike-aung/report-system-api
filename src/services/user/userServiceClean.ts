@@ -297,16 +297,3 @@ export const getAuthorizedReportersWithOneWeekReports = async (): Promise<User[]
     },
   });
 };
-
-// Missing export that's used in controllers
-export const getOnlyAuthorizedReporters = async (): Promise<User[]> => {
-  return await prisma.user.findMany({
-    where: {
-      can_report: true,
-      workflows_url: {
-        not: null,
-      },
-    },
-    include: { project: true },
-  });
-};

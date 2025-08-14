@@ -1,5 +1,6 @@
-import { MESSAGE, STATUS_CODES } from "../../constants/messages";
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
+import { BaseController } from "../common/baseController";
+import { validateInput } from "../../utils/validation";
 import {
   create as createProjectService,
   destroy as deleteProjectService,
@@ -7,101 +8,103 @@ import {
   get as getProjectService,
   update as updateProjectService,
 } from "../../services/project/projectService";
+import { STATUS_CODES } from "../../constants/messages";
 
-/**
- *
- * @param req
- * @param res
- */
-export const getProject = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
-  try {
-    const projects = await getProjectService();
-    res.status(STATUS_CODES.OK).json(projects);
-  } catch (error) {
-    console.error(error);
-    res
-      .status(STATUS_CODES.SERVER_ERROR)
-      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
-  }
-};
+class ProjectController extends BaseController {
+  /**
+   * Get all projects
+   */
+  public getProjects = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    await this.handleRequest(
+      req,
+      res,
+      next,
+      async () => {
+        return await getProjectService();
+      },
+      "Projects retrieved successfully"
+    );
+  };
 
-export const getProjectById = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
-  try {
-    const project = await getProjectByIdService(Number(req.params.id));
-    res.status(STATUS_CODES.OK).json(project);
-  } catch (error) {
-    console.error(error);
-    res.status(STATUS_CODES.OK).json({ message: MESSAGE.ERROR.SERVER_ERROR });
-  }
-};
+  /**
+   * Get project by ID
+   */
+  public getProjectById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    await this.handleRequest(
+      req,
+      res,
+      next,
+      async () => {
+        const id = this.getIdFromParams(req);
+        return await getProjectByIdService(id);
+      },
+      "Project retrieved successfully"
+    );
+  };
 
-/**
- *
- * @param req
- * @param res
- */
-export const createProject = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
-  try {
-    const project = await createProjectService(req.body);
-    res.status(STATUS_CODES.CREATED).json(project);
-  } catch (error) {
-    console.error(error);
-    res
-      .status(STATUS_CODES.SERVER_ERROR)
-      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
-  }
-};
+  /**
+   * Create new project
+   */
+  public createProject = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    await this.handleRequest(
+      req,
+      res,
+      next,
+      async () => {
+        validateInput(req.body, [
+          { field: 'name', required: true, type: 'string', minLength: 1 }
+        ]);
 
-/**
- * update project
- * @param req
- * @param res
- */
-export const updateProject = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
-  try {
-    const project = await updateProjectService(Number(req.params.id), req.body);
-    res.status(STATUS_CODES.OK).json(project);
-  } catch (error) {
-    console.error(error);
-    res
-      .status(STATUS_CODES.SERVER_ERROR)
-      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
-  }
-};
+        return await createProjectService(req.body);
+      },
+      "Project created successfully",
+      STATUS_CODES.CREATED
+    );
+  };
 
-/**
- * delete project
- * @param req
- * @param res
- */
-export const deleteProject = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
-  try {
-    const isDeleted = await deleteProjectService(Number(req.params.id));
-    if (!isDeleted) {
-      res
-        .status(STATUS_CODES.NOT_FOUND)
-        .json({ message: `project ${MESSAGE.ERROR.NOT_FOUND}` });
-    }
-    res.status(STATUS_CODES.OK).send();
-  } catch (error) {
-    console.error(error);
-    res
-      .status(STATUS_CODES.SERVER_ERROR)
-      .json({ message: MESSAGE.ERROR.SERVER_ERROR });
-  }
-};
+  /**
+   * Update project
+   */
+  public updateProject = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    await this.handleRequest(
+      req,
+      res,
+      next,
+      async () => {
+        const id = this.getIdFromParams(req);
+        this.validateRequestBody(req);
+
+        validateInput(req.body, [
+          { field: 'name', required: false, type: 'string', minLength: 1 }
+        ]);
+
+        return await updateProjectService(id, req.body);
+      },
+      "Project updated successfully"
+    );
+  };
+
+  /**
+   * Delete project
+   */
+  public deleteProject = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    await this.handleNoContentRequest(
+      req,
+      res,
+      next,
+      async () => {
+        const id = this.getIdFromParams(req);
+        return await deleteProjectService(id);
+      }
+    );
+  };
+}
+
+const projectController = new ProjectController();
+
+// Export individual methods for route handlers
+export const getProject = projectController.getProjects;
+export const getProjectById = projectController.getProjectById;
+export const createProject = projectController.createProject;
+export const updateProject = projectController.updateProject;
+export const deleteProject = projectController.deleteProject;

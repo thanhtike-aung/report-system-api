@@ -74,10 +74,7 @@ class ReportController extends BaseController {
       res,
       next,
       async () => {
-        const userId = Number(req.query.userId);
-        if (isNaN(userId) || userId <= 0) {
-          throw new Error('Valid userId query parameter is required');
-        }
+        const userId = this.validateId(req.query.userId as string, 'User ID');
         const status = req.query.status as ReportStatus;
         
         if (!status) {
@@ -174,29 +171,6 @@ class ReportController extends BaseController {
       "Old reports retrieved successfully"
     );
   };
-
-  /**
-   * Update reports for a user
-   */
-  public updateReports = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    await this.handleRequest(
-      req,
-      res,
-      next,
-      async () => {
-        const userId = this.getIdFromParams(req, 'userId');
-        
-        validateInput(req.body, [
-          { field: 'reports', required: true, type: 'array' }
-        ]);
-
-        const reports = req.body;
-        logger.info('Updating reports', { userId, reportCount: reports.length });
-        return await updateReportsService(userId, reports);
-      },
-      "Reports updated successfully"
-    );
-  };
 }
 
 /**
@@ -220,7 +194,7 @@ export const sendReportReminderToTeams = async (): Promise<void> => {
 
     if (notReportedUsers.length > 0) {
       logger.info('Sending report reminder', { notReportedCount: notReportedUsers.length });
-      await sendReportReminderToTeamsUtils();
+      await sendReportReminderToTeamsUtils(notReportedUsers);
       logger.info("Report reminder sent successfully");
     } else {
       logger.info("All users have submitted reports, no reminder needed");
@@ -243,7 +217,7 @@ export const sendReportToTeams = async (): Promise<void> => {
 
     // Group members by project
     const membersGroupedBy = reportSenders.map((sender) => ({
-      projectName: sender.project?.name || 'Unknown Project',
+      projectName: sender.project.name,
       data: [sender],
     }));
 
@@ -255,10 +229,9 @@ export const sendReportToTeams = async (): Promise<void> => {
 
       if (reports.length > 0) {
         await sendReportToTeamsUtils(
-          memberGroupedBy.data,
           reports,
-          attendances,
-          memberGroupedBy
+          memberGroupedBy.projectName,
+          attendances
         );
       }
     });
@@ -281,4 +254,3 @@ export const createReports = reportController.createReports;
 export const getReportsByIdAndDate = reportController.getReportsByIdAndDate;
 export const getOneWeekAgoReports = reportController.getOneWeekAgoReports;
 export const getReportsByIdAndWeekAgo = reportController.getReportsByIdAndWeekAgo;
-export const updateReports = reportController.updateReports;

@@ -5,7 +5,7 @@
   "main": "src/index.ts",
   "scripts": {
     "start": "node dist/index.js",
-    "watch": "nodemon --ext ts --exec ts-node src/index.ts",
+    "dev": "nodemon --ext ts --exec ts-node src/index.ts",
     "build": "tsc",
     "prisma:seed": "ts-node prisma/seeds/userSeed.ts"
   },

@@ -36,3 +36,31 @@ export interface UserPayload {
   workflowsUrl?: string;
   supervisorId: string | null;
 }
+
+export interface CreateUserPayload {
+  name: string;
+  email: string;
+  password: string;
+  projectId: number;
+  role: UserRole;
+  isActive?: boolean;
+  canReport?: boolean;
+  workflowsUrl?: string;
+  supervisorId?: number | null;
+}
+
+export interface UpdateUserPayload {
+  name?: string;
+  email?: string;
+  role?: UserRole;
+  isActive?: boolean;
+  canReport?: boolean;
+  workflowsUrl?: string;
+  supervisorId?: number | null;
+  projectId?: number;
+}
+
+export interface UserResponse extends Omit<User, 'password'> {
+  project: Project;
+  supervisor?: User;
+}
