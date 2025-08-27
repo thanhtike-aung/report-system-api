@@ -274,14 +274,7 @@ export const getAuthorizedReportersWithUsersAndReports = async (): Promise<
       },
     },
     include: {
-      reports: true,
-      project: true,
-      subordinates: {
-        include: {
-          reports: true,
-          project: true,
-        },
-      },
+      subordinates: true,
     },
   });
 };

@@ -270,7 +270,7 @@ export const sendReportToTeamsUtils = async (
   memberGroupedBy: any,
 ): Promise<void> => {
   try {
-    if (!memberGroupedBy.data[0].workflows_url) {
+    if (!memberGroupedBy.workflowsUrl) {
       throw new Error("There is no workflows URL provided.");
     }
 
@@ -280,8 +280,8 @@ export const sendReportToTeamsUtils = async (
       attendances,
     );
     const messagePayload = buildReportMessageCard(blocks);
-    await saveAdaptiveCardMessage(messagePayload, memberGroupedBy.data[0].id);
-    await axios.post(memberGroupedBy.data[0].workflows_url, messagePayload);
+    await saveAdaptiveCardMessage(messagePayload, memberGroupedBy.senderId);
+    await axios.post(memberGroupedBy.workflowsUrl, messagePayload);
   } catch (error) {
     handleError(error);
   }

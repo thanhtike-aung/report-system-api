@@ -18,7 +18,7 @@ import {
   sendReportToTeamsUtils,
 } from "../../utils/report/sendToTeams";
 import {
-  get as getAllMembers,
+  getAuthorizedReportersWithUsersAndReports,
   getOnlyAuthorizedReporters,
 } from "../../services/user/userService";
 import { User } from "types/user";
@@ -278,26 +278,27 @@ export const sendReportToTeams = async (): Promise<void> => {
   try {
     logger.info("Starting report Teams notification");
 
-    const reportSenders = await getOnlyAuthorizedReporters();
+    const reportSenders = await getAuthorizedReportersWithUsersAndReports();
     const attendances = await getTodayAttendances();
 
-    // Group members by project
     const membersGroupedBy = reportSenders.map((sender) => ({
-      projectName: sender.project?.name || "Unknown Project",
-      data: [sender],
+      workflowsUrl: sender.workflows_url,
+      senderId: sender.id,
+      ids: [
+        sender.id,
+        ...sender.subordinates.map((subordinate: User) => subordinate.id),
+      ],
     }));
 
     const promises = membersGroupedBy.map(async (memberGroupedBy) => {
-      console.log(memberGroupedBy);
       const reports = await getByIdAndDate(
-        memberGroupedBy.data.map((user) => user.id),
+        memberGroupedBy.ids,
         dayjs().format("YYYY-MM-DD"),
       );
-      // console.log(reports);
 
       if (reports.length > 0) {
         await sendReportToTeamsUtils(
-          memberGroupedBy.data,
+          memberGroupedBy.ids,
           reports,
           attendances,
           memberGroupedBy,
