@@ -18,9 +18,9 @@ class ReportService extends BaseService {
     return this.execute(async () => {
       return await this.prisma.report.findMany({
         include: { user: true },
-        orderBy: { updated_at: 'desc' },
+        orderBy: { updated_at: "desc" },
       });
-    }, 'getAllReports');
+    }, "getAllReports");
   }
 
   /**
@@ -29,7 +29,7 @@ class ReportService extends BaseService {
   async getTodayReports(): Promise<Report[]> {
     return this.execute(async () => {
       const { startDate, endDate } = this.getTodayRange();
-      
+
       return await this.prisma.report.findMany({
         where: {
           updated_at: {
@@ -38,9 +38,9 @@ class ReportService extends BaseService {
           },
         },
         include: { user: true },
-        orderBy: { updated_at: 'desc' },
+        orderBy: { updated_at: "desc" },
       });
-    }, 'getTodayReports');
+    }, "getTodayReports");
   }
 
   /**
@@ -48,16 +48,16 @@ class ReportService extends BaseService {
    */
   async getReportsByUserIds(userIds: number[]): Promise<Report[]> {
     return this.execute(async () => {
-      const validIds = this.validateIds(userIds, 'User IDs');
-      
+      const validIds = this.validateIds(userIds, "User IDs");
+
       return await this.prisma.report.findMany({
         where: {
           user_id: { in: validIds },
         },
         include: { user: true },
-        orderBy: { updated_at: 'desc' },
+        orderBy: { updated_at: "desc" },
       });
-    }, 'getReportsByUserIds');
+    }, "getReportsByUserIds");
   }
 
   /**
@@ -66,7 +66,7 @@ class ReportService extends BaseService {
   async getOneWeekAgoReports(): Promise<Report[]> {
     return this.execute(async () => {
       const { startDate } = this.getPeriodRange(9);
-      
+
       return await this.prisma.report.findMany({
         where: {
           updated_at: { gte: startDate },
@@ -74,7 +74,7 @@ class ReportService extends BaseService {
         include: { user: true },
         orderBy: { updated_at: "desc" },
       });
-    }, 'getOneWeekAgoReports');
+    }, "getOneWeekAgoReports");
   }
 
   /**
@@ -82,9 +82,9 @@ class ReportService extends BaseService {
    */
   async getReportsByIdAndWeekAgo(userId: number): Promise<Report[]> {
     return this.execute(async () => {
-      const validUserId = this.validateId(userId, 'User ID');
+      const validUserId = this.validateId(userId, "User ID");
       const weekAgo = dayjs().subtract(7, "day").toDate();
-      
+
       return await this.prisma.report.findMany({
         where: {
           updated_at: { lt: weekAgo },
@@ -93,17 +93,20 @@ class ReportService extends BaseService {
         include: { user: true },
         orderBy: { updated_at: "desc" },
       });
-    }, 'getReportsByIdAndWeekAgo');
+    }, "getReportsByIdAndWeekAgo");
   }
 
   /**
    * Get reports by user IDs and specific date
    */
-  async getReportsByIdAndDate(userIds: number[], date: string): Promise<Report[]> {
+  async getReportsByIdAndDate(
+    userIds: number[],
+    date: string,
+  ): Promise<Report[]> {
     return this.execute(async () => {
-      const validIds = this.validateIds(userIds, 'User IDs');
+      const validIds = this.validateIds(userIds, "User IDs");
       const { startDate, endDate } = this.getDateRange(date);
-      
+
       return await this.prisma.report.findMany({
         where: {
           user_id: { in: validIds },
@@ -119,17 +122,20 @@ class ReportService extends BaseService {
         },
         orderBy: { updated_at: "desc" },
       });
-    }, 'getReportsByIdAndDate');
+    }, "getReportsByIdAndDate");
   }
 
   /**
    * Get today's reports by user ID and status
    */
-  async getTodayReportsByUserIdAndStatus(userId: number, status: ReportStatus): Promise<Report[]> {
+  async getTodayReportsByUserIdAndStatus(
+    userId: number,
+    status: ReportStatus,
+  ): Promise<Report[]> {
     return this.execute(async () => {
-      const validUserId = this.validateId(userId, 'User ID');
+      const validUserId = this.validateId(userId, "User ID");
       const { startDate, endDate } = this.getTodayRange();
-      
+
       return await this.prisma.report.findMany({
         where: {
           user_id: validUserId,
@@ -142,29 +148,31 @@ class ReportService extends BaseService {
         include: { user: true },
         orderBy: { created_at: "desc" },
       });
-    }, 'getTodayReportsByUserIdAndStatus');
-  };
+    }, "getTodayReportsByUserIdAndStatus");
+  }
 
   /**
    * Create multiple reports
    */
-  async createReports(reportPayload: ReportPayload[]): Promise<{ count: number }> {
+  async createReports(
+    reportPayload: ReportPayload[],
+  ): Promise<{ count: number }> {
     return this.execute(async () => {
       if (!Array.isArray(reportPayload) || reportPayload.length === 0) {
-        throw new ValidationError('Report payload must be a non-empty array');
+        throw new ValidationError("Report payload must be a non-empty array");
       }
 
-      logger.info('Creating reports', { count: reportPayload.length });
+      logger.info("Creating reports", { count: reportPayload.length });
 
       const result = await this.prisma.report.createMany({
         data: reportPayload,
         skipDuplicates: false,
       });
 
-      logger.info('Reports created successfully', { created: result.count });
-      
+      logger.info("Reports created successfully", { created: result.count });
+
       return result;
-    }, 'createReports');
+    }, "createReports");
   }
 
   /**
@@ -172,7 +180,7 @@ class ReportService extends BaseService {
    */
   async checkTodayReportExists(userId: number): Promise<boolean> {
     return this.execute(async () => {
-      const validUserId = this.validateId(userId, 'User ID');
+      const validUserId = this.validateId(userId, "User ID");
       const { startDate, endDate } = this.getTodayRange();
 
       const existingReport = await this.prisma.report.findFirst({
@@ -186,27 +194,33 @@ class ReportService extends BaseService {
       });
 
       return !!existingReport;
-    }, 'checkTodayReportExists');
+    }, "checkTodayReportExists");
   }
 
-/**
- * Update reports for a specific day by deleting existing ones and inserting new data
- * @param userId
- * @param reportPayload
- * @returns
- */
+  /**
+   * Update reports for a specific day by deleting existing ones and inserting new data
+   * @param userId
+   * @param reportPayload
+   * @returns
+   */
   /**
    * Update reports for a user (replace today's reports)
    */
-  async updateUserReports(userId: number, reportPayload: ReportPayload[]): Promise<{ created: number }> {
+  async updateUserReports(
+    userId: number,
+    reportPayload: ReportPayload[],
+  ): Promise<{ created: number }> {
     return this.executeWithTransaction(async (tx) => {
-      const validUserId = this.validateId(userId, 'User ID');
-      
+      const validUserId = this.validateId(userId, "User ID");
+
       if (!Array.isArray(reportPayload) || reportPayload.length === 0) {
-        throw new ValidationError('Report payload must be a non-empty array');
+        throw new ValidationError("Report payload must be a non-empty array");
       }
 
-      logger.info('Updating user reports', { userId: validUserId, count: reportPayload.length });
+      logger.info("Updating user reports", {
+        userId: validUserId,
+        count: reportPayload.length,
+      });
 
       const { startDate, endDate } = this.getTodayRange();
 
@@ -233,24 +247,29 @@ class ReportService extends BaseService {
         skipDuplicates: false,
       });
 
-      logger.info('User reports updated successfully', { 
-        userId: validUserId, 
-        created: createResult.count 
+      logger.info("User reports updated successfully", {
+        userId: validUserId,
+        created: createResult.count,
       });
 
       return { created: createResult.count };
-    }, 'updateUserReports');
+    }, "updateUserReports");
   }
 
   /**
    * Save adaptive card message for reports
    */
-  async saveAdaptiveCardMessage(messagePayload: any, userId: number): Promise<void> {
+  async saveAdaptiveCardMessage(
+    messagePayload: any,
+    userId: number,
+  ): Promise<void> {
     return this.execute(async () => {
-      const validUserId = this.validateId(userId, 'User ID');
-      
+      const validUserId = this.validateId(userId, "User ID");
+
       if (!messagePayload) {
-        throw new ValidationError('Message payload cannot be null or undefined');
+        throw new ValidationError(
+          "Message payload cannot be null or undefined",
+        );
       }
 
       await this.prisma.adaptiveCardMessage.create({
@@ -261,8 +280,8 @@ class ReportService extends BaseService {
         },
       });
 
-      logger.info('Adaptive card message saved', { userId: validUserId });
-    }, 'saveAdaptiveCardMessage');
+      logger.info("Adaptive card message saved", { userId: validUserId });
+    }, "saveAdaptiveCardMessage");
   }
 }
 
@@ -271,12 +290,22 @@ const reportService = new ReportService();
 // Legacy exports for backward compatibility
 export const get = () => reportService.getAllReports();
 export const getByToday = () => reportService.getTodayReports();
-export const getByUserIds = (ids: number[]) => reportService.getReportsByUserIds(ids);
+export const getByUserIds = (ids: number[]) =>
+  reportService.getReportsByUserIds(ids);
 export const getOneWeekAgo = () => reportService.getOneWeekAgoReports();
-export const getByIdAndWeekAgo = (id: number) => reportService.getReportsByIdAndWeekAgo(id);
-export const getByIdAndDate = (ids: number[], date: string) => reportService.getReportsByIdAndDate(ids, date);
-export const getTodayByUserIdAndStatus = (userId: number, status: ReportStatus) => reportService.getTodayReportsByUserIdAndStatus(userId, status);
-export const create = (payload: ReportPayload[]) => reportService.createReports(payload);
-export const update = (userId: number, payload: ReportPayload[]) => reportService.updateUserReports(userId, payload);
-export const checkExistingReport = (userId: number) => reportService.checkTodayReportExists(userId);
-export const saveAdaptiveCardMessage = (payload: any, userId: number) => reportService.saveAdaptiveCardMessage(payload, userId);
+export const getByIdAndWeekAgo = (id: number) =>
+  reportService.getReportsByIdAndWeekAgo(id);
+export const getByIdAndDate = (ids: number[], date: string) =>
+  reportService.getReportsByIdAndDate(ids, date);
+export const getTodayByUserIdAndStatus = (
+  userId: number,
+  status: ReportStatus,
+) => reportService.getTodayReportsByUserIdAndStatus(userId, status);
+export const create = (payload: ReportPayload[]) =>
+  reportService.createReports(payload);
+export const update = (userId: number, payload: ReportPayload[]) =>
+  reportService.updateUserReports(userId, payload);
+export const checkExistingReport = (userId: number) =>
+  reportService.checkTodayReportExists(userId);
+export const saveAdaptiveCardMessage = (payload: any, userId: number) =>
+  reportService.saveAdaptiveCardMessage(payload, userId);

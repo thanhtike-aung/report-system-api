@@ -25,7 +25,7 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
 export const createSuccessResponse = <T>(
   data: T,
   message?: string,
-  statusCode: number = 200
+  statusCode: number = 200,
 ): ApiResponse<T> => ({
   success: true,
   data,
@@ -37,7 +37,7 @@ export const createSuccessResponse = <T>(
 export const createErrorResponse = (
   error: string,
   statusCode: number,
-  details?: any
+  details?: any,
 ): ApiResponse => ({
   success: false,
   error,

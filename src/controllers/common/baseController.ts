@@ -1,5 +1,8 @@
 import { Request, Response, NextFunction } from "express";
-import { createSuccessResponse, createErrorResponse } from "../../types/common/apiResponse";
+import {
+  createSuccessResponse,
+  createErrorResponse,
+} from "../../types/common/apiResponse";
 import { AppError, InternalServerError } from "../../utils/errors";
 import { STATUS_CODES, MESSAGE } from "../../constants/messages";
 
@@ -13,40 +16,47 @@ export abstract class BaseController {
     next: NextFunction,
     operation: () => Promise<any>,
     successMessage?: string,
-    successStatusCode: number = STATUS_CODES.OK
+    successStatusCode: number = STATUS_CODES.OK,
   ): Promise<void> {
     try {
       const result = await operation();
-      
-      if (result && typeof result === 'object' && 'status' in result) {
-        // Handle service responses that return status objects
-        if (result.status !== STATUS_CODES.OK && result.status !== STATUS_CODES.CREATED) {
+
+      if (
+        result &&
+        typeof result === "object" &&
+        "status" in result &&
+        typeof result.status === "number"
+      ) {
+        // Handle service responses that return status objects (only if status is a number)
+        if (
+          result.status !== STATUS_CODES.OK &&
+          result.status !== STATUS_CODES.CREATED
+        ) {
           const errorResponse = createErrorResponse(
             result.message || "Operation failed",
-            result.status
+            result.status,
           );
           res.status(result.status).json(errorResponse);
           return;
         }
-        
+
         // Success response from service
         const response = createSuccessResponse(
           result.data || result.token || result,
           result.message || successMessage,
-          result.status || successStatusCode
+          result.status || successStatusCode,
         );
         res.status(result.status || successStatusCode).json(response);
         return;
       }
-      
+
       // Direct data response
       const response = createSuccessResponse(
         result,
         successMessage,
-        successStatusCode
+        successStatusCode,
       );
       res.status(successStatusCode).json(response);
-      
     } catch (error) {
       console.error("Controller error:", {
         error: error instanceof Error ? error.message : error,
@@ -71,14 +81,14 @@ export abstract class BaseController {
     req: Request,
     res: Response,
     next: NextFunction,
-    operation: () => Promise<any>
+    operation: () => Promise<any>,
   ): Promise<void> {
     try {
       await operation();
       res.status(STATUS_CODES.NO_CONTENT).send();
     } catch (error) {
       console.error("Controller error:", error);
-      
+
       if (error instanceof AppError) {
         next(error);
       } else {
@@ -90,7 +100,7 @@ export abstract class BaseController {
   /**
    * Extract numeric ID from request parameters
    */
-  protected getIdFromParams(req: Request, paramName: string = 'id'): number {
+  protected getIdFromParams(req: Request, paramName: string = "id"): number {
     const id = Number(req.params[paramName]);
     if (isNaN(id) || id <= 0) {
       throw new AppError(`Invalid ${paramName}`, STATUS_CODES.BAD_REQUEST);
@@ -101,7 +111,10 @@ export abstract class BaseController {
   /**
    * Extract query parameters with default values
    */
-  protected getQueryParams(req: Request, defaults: { [key: string]: any } = {}) {
+  protected getQueryParams(
+    req: Request,
+    defaults: { [key: string]: any } = {},
+  ) {
     return { ...defaults, ...req.query };
   }
 

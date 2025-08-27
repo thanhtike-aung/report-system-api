@@ -7,7 +7,7 @@ export const errorHandler: ErrorRequestHandler = (
   error: Error | AppError,
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void => {
   console.error("Error occurred:", {
     message: error.message,
@@ -22,7 +22,7 @@ export const errorHandler: ErrorRequestHandler = (
     const errorResponse = createErrorResponse(
       error.message,
       error.statusCode,
-      error.details
+      error.details,
     );
     res.status(error.statusCode).json(errorResponse);
     return;
@@ -32,7 +32,7 @@ export const errorHandler: ErrorRequestHandler = (
   if (error.message.includes("JWT")) {
     const errorResponse = createErrorResponse(
       MESSAGE.ERROR.INVALID_TOKEN,
-      STATUS_CODES.UNAUTHORIZED
+      STATUS_CODES.UNAUTHORIZED,
     );
     res.status(STATUS_CODES.UNAUTHORIZED).json(errorResponse);
     return;
@@ -42,17 +42,20 @@ export const errorHandler: ErrorRequestHandler = (
   if (error.message.includes("Unique constraint")) {
     const errorResponse = createErrorResponse(
       "Resource already exists",
-      STATUS_CODES.BAD_REQUEST
+      STATUS_CODES.BAD_REQUEST,
     );
     res.status(STATUS_CODES.BAD_REQUEST).json(errorResponse);
     return;
   }
 
   // Handle validation errors
-  if (error.message.includes("validation") || error.message.includes("required")) {
+  if (
+    error.message.includes("validation") ||
+    error.message.includes("required")
+  ) {
     const errorResponse = createErrorResponse(
       MESSAGE.ERROR.INVALID_INPUT,
-      STATUS_CODES.BAD_REQUEST
+      STATUS_CODES.BAD_REQUEST,
     );
     res.status(STATUS_CODES.BAD_REQUEST).json(errorResponse);
     return;
@@ -61,11 +64,12 @@ export const errorHandler: ErrorRequestHandler = (
   // Default server error
   const errorResponse = createErrorResponse(
     MESSAGE.ERROR.SERVER_ERROR,
-    STATUS_CODES.SERVER_ERROR
+    STATUS_CODES.SERVER_ERROR,
   );
   res.status(STATUS_CODES.SERVER_ERROR).json(errorResponse);
 };
 
 // Async error wrapper to catch async errors
-export const asyncHandler = (fn: Function) => (req: Request, res: Response, next: NextFunction) =>
-  Promise.resolve(fn(req, res, next)).catch(next);
+export const asyncHandler =
+  (fn: Function) => (req: Request, res: Response, next: NextFunction) =>
+    Promise.resolve(fn(req, res, next)).catch(next);

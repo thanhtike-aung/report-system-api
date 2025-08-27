@@ -63,9 +63,9 @@ class AttendanceService extends BaseService {
     return this.execute(async () => {
       return await this.prisma.attendance.findMany({
         include: { reporter: true, creator: true },
-        orderBy: { updated_at: 'desc' },
+        orderBy: { updated_at: "desc" },
       });
-    }, 'getAllAttendances');
+    }, "getAllAttendances");
   }
 
   /**
@@ -73,23 +73,26 @@ class AttendanceService extends BaseService {
    */
   async getAttendanceByUserId(userId: number): Promise<Attendance | null> {
     return this.execute(async () => {
-      const validUserId = this.validateId(userId, 'User ID');
-      
+      const validUserId = this.validateId(userId, "User ID");
+
       return await this.prisma.attendance.findFirst({
         where: { reported_by: validUserId },
         include: { reporter: true, creator: true },
       });
-    }, 'getAttendanceByUserId');
+    }, "getAttendanceByUserId");
   }
 
   /**
    * Get attendance by user ID and specific date
    */
-  async getAttendanceByIdAndDate(userId: number, date: string): Promise<Attendance | null> {
+  async getAttendanceByIdAndDate(
+    userId: number,
+    date: string,
+  ): Promise<Attendance | null> {
     return this.execute(async () => {
-      const validUserId = this.validateId(userId, 'User ID');
+      const validUserId = this.validateId(userId, "User ID");
       const { startDate, endDate } = this.getDateRange(date);
-      
+
       return await this.prisma.attendance.findFirst({
         where: {
           reported_by: validUserId,
@@ -100,7 +103,7 @@ class AttendanceService extends BaseService {
         },
         include: { reporter: true, creator: true },
       });
-    }, 'getAttendanceByIdAndDate');
+    }, "getAttendanceByIdAndDate");
   }
 
   /**
@@ -109,7 +112,7 @@ class AttendanceService extends BaseService {
   async getTodayAttendances(): Promise<Attendance[]> {
     return this.execute(async () => {
       const { startDate, endDate } = this.getTodayRange();
-      
+
       return await this.prisma.attendance.findMany({
         where: {
           updated_at: {
@@ -123,28 +126,36 @@ class AttendanceService extends BaseService {
             include: { project: true },
           },
         },
-        orderBy: { updated_at: 'desc' },
+        orderBy: { updated_at: "desc" },
       });
-    }, 'getTodayAttendances');
-  };
+    }, "getTodayAttendances");
+  }
 
   /**
    * Create attendance record
    */
-  async createAttendance(attendance: CreateAttendancePayload): Promise<Attendance | undefined> {
+  async createAttendance(
+    attendance: CreateAttendancePayload,
+  ): Promise<Attendance | undefined> {
     return this.executeWithTransaction(async (tx) => {
       // Validate input
       if (!attendance.reportedBy || !attendance.createdBy) {
-        throw new ValidationError('Reporter and creator IDs are required');
+        throw new ValidationError("Reporter and creator IDs are required");
       }
 
-      const validReportedBy = this.validateId(attendance.reportedBy, 'Reported By ID');
-      const validCreatedBy = this.validateId(attendance.createdBy, 'Created By ID');
+      const validReportedBy = this.validateId(
+        attendance.reportedBy,
+        "Reported By ID",
+      );
+      const validCreatedBy = this.validateId(
+        attendance.createdBy,
+        "Created By ID",
+      );
 
-      logger.info('Creating attendance record', { 
-        reportedBy: validReportedBy, 
+      logger.info("Creating attendance record", {
+        reportedBy: validReportedBy,
         createdBy: validCreatedBy,
-        workingTime: attendance.workingTime 
+        workingTime: attendance.workingTime,
       });
       const modifiedLeavePeriod = determineLeavePeriod(
         attendance.workingTime,
@@ -154,7 +165,7 @@ class AttendanceService extends BaseService {
         attendance.leaveReason,
         attendance.otherLeaveReason,
       );
-      
+
       const { startDate: todayStart, endDate: todayEnd } = this.getTodayRange();
 
       const existingAttendance = await tx.attendance.findFirst({
@@ -191,79 +202,90 @@ class AttendanceService extends BaseService {
 
       // Handle existing attendance update
       if (existingAttendance) {
-        logger.info('Updating existing attendance', { attendanceId: existingAttendance.id });
-        
+        logger.info("Updating existing attendance", {
+          attendanceId: existingAttendance.id,
+        });
+
         // for evening reporting
-        if (attendanceData.leave_period !== LEAVE_PERIOD.FULL) {
-          await tx.report.deleteMany({
-            where: {
-              user_id: validReportedBy,
-              updated_at: {
-                gte: todayStart,
-                lt: todayEnd,
-              },
-            },
-          });
-        } else {
-          await tx.report.create({
-            data: {
-              project: attendanceData.project,
-              task_title: "",
-              task_description: "",
-              progress: 0,
-              man_hours: 0,
-              working_time: 0,
-              user_id: validReportedBy,
-            },
-          });
-        }
-        
+        // if (attendanceData.leave_period !== LEAVE_PERIOD.FULL) {
+        //   await tx.report.deleteMany({
+        //     where: {
+        //       user_id: validReportedBy,
+        //       updated_at: {
+        //         gte: todayStart,
+        //         lt: todayEnd,
+        //       },
+        //     },
+        //   });
+        // } else {
+        //   await tx.report.create({
+        //     data: {
+        //       project: attendanceData.project,
+        //       task_title: "",
+        //       task_description: "",
+        //       progress: 0,
+        //       man_hours: 0,
+        //       working_time: 0,
+        //       user_id: validReportedBy,
+        //     },
+        //   });
+        // }
+
         const updatedAttendance = await tx.attendance.update({
           where: { id: existingAttendance.id },
           data: attendanceData,
           include: { reporter: true, creator: true },
         });
-        
-        logger.info('Attendance updated successfully', { attendanceId: updatedAttendance.id });
+
+        logger.info("Attendance updated successfully", {
+          attendanceId: updatedAttendance.id,
+        });
         return updatedAttendance;
       } else {
-        logger.info('Creating new attendance record');
-        
+        logger.info("Creating new attendance record");
+
         // for evening reporting
-        if (attendanceData.leave_period === LEAVE_PERIOD.FULL) {
-          await tx.report.create({
-            data: {
-              project: attendanceData.project,
-              task_title: "",
-              task_description: "",
-              progress: 0,
-              man_hours: 0,
-              working_time: 0,
-              user_id: validReportedBy,
-            },
-          });
-        }
-        
+        // if (attendanceData.leave_period === LEAVE_PERIOD.FULL) {
+        //   await tx.report.create({
+        //     data: {
+        //       project: attendanceData.project,
+        //       task_title: "",
+        //       task_description: "",
+        //       progress: 0,
+        //       man_hours: 0,
+        //       working_time: 0,
+        //       user_id: validReportedBy,
+        //     },
+        //   });
+        // }
+
         const newAttendance = await tx.attendance.create({
           data: attendanceData,
           include: { reporter: true, creator: true },
         });
-        
-        logger.info('Attendance created successfully', { attendanceId: newAttendance.id });
+
+        logger.info("Attendance created successfully", {
+          attendanceId: newAttendance.id,
+        });
         return newAttendance;
       }
-    }, 'createAttendance');
+    }, "createAttendance");
   }
 
   /**
    * Save adaptive card message for attendance
    */
-  async saveAdaptiveCardMessage(messagePayload: any, userId: number): Promise<void> {
+  async saveAdaptiveCardMessage(
+    messagePayload: any,
+    userId: number,
+  ): Promise<void> {
     return this.execute(async () => {
-      const validUserId = this.validateId(userId, 'User ID');
-      
+      const validUserId = this.validateId(userId, "User ID");
+
       if (!messagePayload) {
-        throw new ValidationError('Message payload cannot be null or undefined');
+        throw new ValidationError(
+          "Message payload cannot be null or undefined",
+        );
       }
 
       await this.prisma.adaptiveCardMessage.create({
@@ -274,8 +296,10 @@ class AttendanceService extends BaseService {
         },
       });
 
-      logger.info('Adaptive card message saved for attendance', { userId: validUserId });
-    }, 'saveAdaptiveCardMessage');
+      logger.info("Adaptive card message saved for attendance", {
+        userId: validUserId,
+      });
+    }, "saveAdaptiveCardMessage");
   }
 }
 
@@ -283,10 +307,12 @@ const attendanceService = new AttendanceService();
 
 // Legacy exports for backward compatibility
 export const get = () => attendanceService.getAllAttendances();
-export const getById = (id: number) => attendanceService.getAttendanceByUserId(id);
-export const getByIdAndDate = (id: number, date: string) => attendanceService.getAttendanceByIdAndDate(id, date);
+export const getById = (id: number) =>
+  attendanceService.getAttendanceByUserId(id);
+export const getByIdAndDate = (id: number, date: string) =>
+  attendanceService.getAttendanceByIdAndDate(id, date);
 export const getByToday = () => attendanceService.getTodayAttendances();
-export const create = (attendance: CreateAttendancePayload) => attendanceService.createAttendance(attendance);
-export const saveAdaptiveCardMessage = (payload: any, userId: number) => attendanceService.saveAdaptiveCardMessage(payload, userId);
-
-
+export const create = (attendance: CreateAttendancePayload) =>
+  attendanceService.createAttendance(attendance);
+export const saveAdaptiveCardMessage = (payload: any, userId: number) =>
+  attendanceService.saveAdaptiveCardMessage(payload, userId);

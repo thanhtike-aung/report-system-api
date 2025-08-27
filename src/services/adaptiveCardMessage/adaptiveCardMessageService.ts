@@ -17,22 +17,24 @@ class AdaptiveCardMessageService extends BaseService {
     return this.execute(async () => {
       return await this.prisma.adaptiveCardMessage.findMany({
         include: { user: true },
-        orderBy: { created_at: 'desc' },
+        orderBy: { created_at: "desc" },
       });
-    }, 'getAllMessages');
+    }, "getAllMessages");
   }
 
   /**
    * Get adaptive card messages by type
    */
-  async getMessagesByType(type: AdaptiveCardMessageType): Promise<AdaptiveCardMessage[]> {
+  async getMessagesByType(
+    type: AdaptiveCardMessageType,
+  ): Promise<AdaptiveCardMessage[]> {
     return this.execute(async () => {
       return await this.prisma.adaptiveCardMessage.findMany({
         where: { type },
         include: { user: true },
-        orderBy: { created_at: 'desc' },
+        orderBy: { created_at: "desc" },
       });
-    }, 'getMessagesByType');
+    }, "getMessagesByType");
   }
 }
 
@@ -40,4 +42,5 @@ const adaptiveCardMessageService = new AdaptiveCardMessageService();
 
 // Legacy exports for backward compatibility
 export const get = () => adaptiveCardMessageService.getAllMessages();
-export const getByType = (type: AdaptiveCardMessageType) => adaptiveCardMessageService.getMessagesByType(type);
+export const getByType = (type: AdaptiveCardMessageType) =>
+  adaptiveCardMessageService.getMessagesByType(type);

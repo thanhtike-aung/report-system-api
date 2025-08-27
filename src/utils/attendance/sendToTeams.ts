@@ -136,7 +136,7 @@ const buildAttendanceReminderMessage = (noReportedUsers: User[]): any => {
               inlines: [
                 {
                   type: "TextRun",
-                  text: "Please report your attendance before 09:30:00",
+                  text: "၉:၀၀ နောက်ဆုံးထားပြီး attendance တင်ပေးပါဦး 🙇🏻‍♂️",
                 },
               ],
             },
@@ -147,8 +147,8 @@ const buildAttendanceReminderMessage = (noReportedUsers: User[]): any => {
           actions: [
             {
               type: "Action.OpenUrl",
-              title: "Click to report attendance",
-              url: "https://dev02-report-system.vercel.app",
+              title: "attendance တင်ရန် နှိပ်ပါ",
+              url: "http://150.95.80.181:7275/attendances/self",
             },
           ],
         },

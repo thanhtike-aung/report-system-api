@@ -9,7 +9,7 @@ export class AppError extends Error {
     message: string,
     statusCode: number = STATUS_CODES.SERVER_ERROR,
     isOperational: boolean = true,
-    details?: any
+    details?: any,
   ) {
     super(message);
     this.statusCode = statusCode;

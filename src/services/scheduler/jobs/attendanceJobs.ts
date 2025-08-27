@@ -7,14 +7,11 @@ import { logger } from "../../../utils/logger";
  */
 export const setupAttendanceJobs = (): void => {
   // Morning attendance message job
-  cronScheduler.registerJob(
-    "MORNING_ATTENDANCE",
-    async () => {
-      logger.info("Executing morning attendance job");
-      await sendAttendanceToTeams();
-      logger.info("Morning attendance message sent successfully");
-    }
-  );
+  cronScheduler.registerJob("MORNING_ATTENDANCE", async () => {
+    logger.info("Executing morning attendance job");
+    await sendAttendanceToTeams();
+    logger.info("Morning attendance message sent successfully");
+  });
 
   logger.info("Attendance cron jobs registered");
 };

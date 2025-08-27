@@ -1,7 +1,11 @@
 import { MESSAGE, STATUS_CODES } from "../../constants/messages";
 import prisma from "../../lib/prisma";
 import { LoginPayload, ChangePasswordPayload } from "../../types/auth";
-import { UnauthorizedError, NotFoundError, InternalServerError } from "../../utils/errors";
+import {
+  UnauthorizedError,
+  NotFoundError,
+  InternalServerError,
+} from "../../utils/errors";
 import { BaseService, ServiceResponse } from "../common/baseService";
 import { config } from "../../utils/config";
 import { logger } from "../../utils/logger";
@@ -18,7 +22,7 @@ class AuthService extends BaseService {
    */
   async login(loginPayload: LoginPayload) {
     return this.execute(async () => {
-      logger.info('User login attempt', { email: loginPayload.email });
+      logger.info("User login attempt", { email: loginPayload.email });
 
       const user = await this.prisma.user.findUnique({
         where: { email: loginPayload.email },
@@ -26,16 +30,23 @@ class AuthService extends BaseService {
       });
 
       if (!user) {
-        logger.warn('Login failed: User not found', { email: loginPayload.email });
+        logger.warn("Login failed: User not found", {
+          email: loginPayload.email,
+        });
         return {
           status: STATUS_CODES.UNAUTHORIZED,
           message: MESSAGE.ERROR.EMAIL_NOT_FOUND,
         };
       }
 
-      const isMatch = await bcrypt.compare(loginPayload.password, user.password);
+      const isMatch = await bcrypt.compare(
+        loginPayload.password,
+        user.password,
+      );
       if (!isMatch) {
-        logger.warn('Login failed: Invalid password', { email: loginPayload.email });
+        logger.warn("Login failed: Invalid password", {
+          email: loginPayload.email,
+        });
         return {
           status: STATUS_CODES.UNAUTHORIZED,
           message: MESSAGE.ERROR.WRONG_PASSWORD,
@@ -56,10 +67,10 @@ class AuthService extends BaseService {
         { expiresIn: "6d" },
       );
 
-      logger.info('User login successful', { 
-        userId: user.id, 
-        email: user.email, 
-        role: user.role 
+      logger.info("User login successful", {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
       });
 
       return {
@@ -67,7 +78,7 @@ class AuthService extends BaseService {
         message: MESSAGE.SUCCESS.LOGGED_IN,
         token: token,
       };
-    }, 'login');
+    }, "login");
   }
 
   /**
@@ -75,14 +86,14 @@ class AuthService extends BaseService {
    */
   async changePassword(passwordPayload: ChangePasswordPayload) {
     return this.execute(async () => {
-      const userId = this.validateId(passwordPayload.userId, 'User ID');
+      const userId = this.validateId(passwordPayload.userId, "User ID");
 
-      logger.info('Password change attempt', { userId });
+      logger.info("Password change attempt", { userId });
 
       const user = await this.validateExists(
         () => this.prisma.user.findUnique({ where: { id: userId } }),
-        'User',
-        userId
+        "User",
+        userId,
       );
 
       const isOldPasswordCorrect = await bcrypt.compare(
@@ -91,7 +102,9 @@ class AuthService extends BaseService {
       );
 
       if (!isOldPasswordCorrect) {
-        logger.warn('Password change failed: Invalid current password', { userId });
+        logger.warn("Password change failed: Invalid current password", {
+          userId,
+        });
         return {
           status: STATUS_CODES.UNAUTHORIZED,
           message: "Your current password is wrong.",
@@ -99,7 +112,7 @@ class AuthService extends BaseService {
       }
 
       const hashedNewPassword = await hash(passwordPayload.newPassword, 10);
-      
+
       const updatedUser = await this.prisma.user.update({
         where: { id: userId },
         data: { password: hashedNewPassword },
@@ -112,14 +125,14 @@ class AuthService extends BaseService {
         },
       });
 
-      logger.info('Password change successful', { userId });
+      logger.info("Password change successful", { userId });
 
-      return { 
-        status: STATUS_CODES.OK, 
+      return {
+        status: STATUS_CODES.OK,
         data: updatedUser,
-        message: "Password changed successfully"
+        message: "Password changed successfully",
       };
-    }, 'changePassword');
+    }, "changePassword");
   }
 }
 
@@ -127,6 +140,5 @@ const authService = new AuthService();
 
 // Export methods for backward compatibility
 export const login = (payload: LoginPayload) => authService.login(payload);
-export const changePassword = (payload: ChangePasswordPayload) => authService.changePassword(payload);
-
-
+export const changePassword = (payload: ChangePasswordPayload) =>
+  authService.changePassword(payload);

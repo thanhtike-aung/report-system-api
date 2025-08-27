@@ -33,7 +33,11 @@ class ReportController extends BaseController {
   /**
    * Get all reports
    */
-  public getReports = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public getReports = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     await this.handleRequest(
       req,
       res,
@@ -41,34 +45,42 @@ class ReportController extends BaseController {
       async () => {
         return await getReportsService();
       },
-      "Reports retrieved successfully"
+      "Reports retrieved successfully",
     );
   };
 
   /**
    * Get reports by user IDs
    */
-  public getReportsByUserIds = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public getReportsByUserIds = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     await this.handleRequest(
       req,
       res,
       next,
       async () => {
         validateInput(req.body, [
-          { field: 'ids', required: true, type: 'array' }
+          { field: "ids", required: true, type: "array" },
         ]);
 
         const ids = validateIds(req.body.ids);
         return await getReportsByUserIdsService(ids);
       },
-      "Reports retrieved successfully"
+      "Reports retrieved successfully",
     );
   };
 
   /**
    * Get today's reports by user ID and status
    */
-  public getTodayReportsByUserIdAndStatus = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public getTodayReportsByUserIdAndStatus = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     await this.handleRequest(
       req,
       res,
@@ -76,33 +88,33 @@ class ReportController extends BaseController {
       async () => {
         const userId = Number(req.query.userId);
         if (isNaN(userId) || userId <= 0) {
-          throw new Error('Valid userId query parameter is required');
+          throw new Error("Valid userId query parameter is required");
         }
         const status = req.query.status as ReportStatus;
-        
+
         if (!status) {
           throw new Error("Status parameter is required");
         }
-        
+
         return await getTodayByUserIdAndStatusService(userId, status);
       },
-      "Today's reports retrieved successfully"
+      "Today's reports retrieved successfully",
     );
   };
 
   /**
    * Create reports with validation
    */
-  public createReports = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public createReports = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     await this.handleRequest(
       req,
       res,
       next,
       async () => {
-        validateInput(req.body, [
-          { field: 'reports', required: true, type: 'array' }
-        ]);
-
         const reports = req.body as ReportPayload[];
         const userIds = [...new Set(reports.map((report) => report.user_id))];
 
@@ -110,44 +122,59 @@ class ReportController extends BaseController {
         for (const userId of userIds) {
           const hasExistingReport = await checkExistingReportService(userId);
           if (hasExistingReport) {
-            throw new Error("Report for today already exists. You cannot create multiple reports for the same day.");
+            return {
+              status: STATUS_CODES.CONFLICT,
+              message:
+                "Report for today already exists. You cannot create multiple reports for the same day.",
+            };
           }
         }
 
-        logger.info('Creating reports', { userCount: userIds.length, reportCount: reports.length });
+        logger.info("Creating reports", {
+          userCount: userIds.length,
+          reportCount: reports.length,
+        });
         return await createReportsService(reports);
       },
       "Reports created successfully",
-      STATUS_CODES.CREATED
+      STATUS_CODES.CREATED,
     );
   };
 
   /**
    * Get reports by user IDs and date
    */
-  public getReportsByIdAndDate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public getReportsByIdAndDate = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     await this.handleRequest(
       req,
       res,
       next,
       async () => {
         validateInput(req.body, [
-          { field: 'ids', required: true, type: 'array' },
-          { field: 'date', required: true, type: 'string' }
+          { field: "ids", required: true, type: "array" },
+          { field: "date", required: true, type: "string" },
         ]);
 
         const ids = validateIds(req.body.ids);
         const { date } = req.body;
         return await getByIdAndDate(ids, date);
       },
-      "Reports retrieved successfully"
+      "Reports retrieved successfully",
     );
   };
 
   /**
    * Get one week ago reports
    */
-  public getOneWeekAgoReports = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public getOneWeekAgoReports = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     await this.handleRequest(
       req,
       res,
@@ -155,14 +182,18 @@ class ReportController extends BaseController {
       async () => {
         return await getOneWeekAgoReportsService();
       },
-      "Week-old reports retrieved successfully"
+      "Week-old reports retrieved successfully",
     );
   };
 
   /**
    * Get reports by user ID older than a week
    */
-  public getReportsByIdAndWeekAgo = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public getReportsByIdAndWeekAgo = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     await this.handleRequest(
       req,
       res,
@@ -171,30 +202,37 @@ class ReportController extends BaseController {
         const userId = this.getIdFromParams(req);
         return await getReportsByIdAndWeekAgoService(userId);
       },
-      "Old reports retrieved successfully"
+      "Old reports retrieved successfully",
     );
   };
 
   /**
    * Update reports for a user
    */
-  public updateReports = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public updateReports = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     await this.handleRequest(
       req,
       res,
       next,
       async () => {
-        const userId = this.getIdFromParams(req, 'userId');
-        
+        const userId = this.getIdFromParams(req, "userId");
+
         validateInput(req.body, [
-          { field: 'reports', required: true, type: 'array' }
+          { field: "reports", required: true, type: "array" },
         ]);
 
         const reports = req.body;
-        logger.info('Updating reports', { userId, reportCount: reports.length });
+        logger.info("Updating reports", {
+          userId,
+          reportCount: reports.length,
+        });
         return await updateReportsService(userId, reports);
       },
-      "Reports updated successfully"
+      "Reports updated successfully",
     );
   };
 }
@@ -219,7 +257,9 @@ export const sendReportReminderToTeams = async (): Promise<void> => {
     const notReportedUsers = getNotReportedUsers(reportSenders, todayReports);
 
     if (notReportedUsers.length > 0) {
-      logger.info('Sending report reminder', { notReportedCount: notReportedUsers.length });
+      logger.info("Sending report reminder", {
+        notReportedCount: notReportedUsers.length,
+      });
       await sendReportReminderToTeamsUtils();
       logger.info("Report reminder sent successfully");
     } else {
@@ -243,22 +283,24 @@ export const sendReportToTeams = async (): Promise<void> => {
 
     // Group members by project
     const membersGroupedBy = reportSenders.map((sender) => ({
-      projectName: sender.project?.name || 'Unknown Project',
+      projectName: sender.project?.name || "Unknown Project",
       data: [sender],
     }));
 
     const promises = membersGroupedBy.map(async (memberGroupedBy) => {
+      console.log(memberGroupedBy);
       const reports = await getByIdAndDate(
         memberGroupedBy.data.map((user) => user.id),
-        dayjs().format("YYYY-MM-DD")
+        dayjs().format("YYYY-MM-DD"),
       );
+      // console.log(reports);
 
       if (reports.length > 0) {
         await sendReportToTeamsUtils(
           memberGroupedBy.data,
           reports,
           attendances,
-          memberGroupedBy
+          memberGroupedBy,
         );
       }
     });
@@ -276,9 +318,11 @@ const reportController = new ReportController();
 // Export individual methods for route handlers
 export const getReports = reportController.getReports;
 export const getReportsByUserIds = reportController.getReportsByUserIds;
-export const getTodayReportsByUserIdAndStatus = reportController.getTodayReportsByUserIdAndStatus;
+export const getTodayReportsByUserIdAndStatus =
+  reportController.getTodayReportsByUserIdAndStatus;
 export const createReports = reportController.createReports;
 export const getReportsByIdAndDate = reportController.getReportsByIdAndDate;
 export const getOneWeekAgoReports = reportController.getOneWeekAgoReports;
-export const getReportsByIdAndWeekAgo = reportController.getReportsByIdAndWeekAgo;
+export const getReportsByIdAndWeekAgo =
+  reportController.getReportsByIdAndWeekAgo;
 export const updateReports = reportController.updateReports;

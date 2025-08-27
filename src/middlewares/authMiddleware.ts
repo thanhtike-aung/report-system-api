@@ -32,8 +32,8 @@ const authMiddleware = (
     throw new UnauthorizedError(MESSAGE.ERROR.ACCESS_DENIED);
   }
 
-  const token = authHeader.startsWith("Bearer ") 
-    ? authHeader.slice(7) 
+  const token = authHeader.startsWith("Bearer ")
+    ? authHeader.slice(7)
     : authHeader;
 
   try {
@@ -41,7 +41,10 @@ const authMiddleware = (
       throw new Error("JWT_SECRET is not defined");
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET) as AuthenticatedUser;
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET,
+    ) as AuthenticatedUser;
     req.user = decoded;
     next();
   } catch (error) {

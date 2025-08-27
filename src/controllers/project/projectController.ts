@@ -14,7 +14,11 @@ class ProjectController extends BaseController {
   /**
    * Get all projects
    */
-  public getProjects = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public getProjects = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     await this.handleRequest(
       req,
       res,
@@ -22,14 +26,18 @@ class ProjectController extends BaseController {
       async () => {
         return await getProjectService();
       },
-      "Projects retrieved successfully"
+      "Projects retrieved successfully",
     );
   };
 
   /**
    * Get project by ID
    */
-  public getProjectById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public getProjectById = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     await this.handleRequest(
       req,
       res,
@@ -38,34 +46,42 @@ class ProjectController extends BaseController {
         const id = this.getIdFromParams(req);
         return await getProjectByIdService(id);
       },
-      "Project retrieved successfully"
+      "Project retrieved successfully",
     );
   };
 
   /**
    * Create new project
    */
-  public createProject = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public createProject = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     await this.handleRequest(
       req,
       res,
       next,
       async () => {
         validateInput(req.body, [
-          { field: 'name', required: true, type: 'string', minLength: 1 }
+          { field: "name", required: true, type: "string", minLength: 1 },
         ]);
 
         return await createProjectService(req.body);
       },
       "Project created successfully",
-      STATUS_CODES.CREATED
+      STATUS_CODES.CREATED,
     );
   };
 
   /**
    * Update project
    */
-  public updateProject = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public updateProject = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     await this.handleRequest(
       req,
       res,
@@ -75,28 +91,27 @@ class ProjectController extends BaseController {
         this.validateRequestBody(req);
 
         validateInput(req.body, [
-          { field: 'name', required: false, type: 'string', minLength: 1 }
+          { field: "name", required: false, type: "string", minLength: 1 },
         ]);
 
         return await updateProjectService(id, req.body);
       },
-      "Project updated successfully"
+      "Project updated successfully",
     );
   };
 
   /**
    * Delete project
    */
-  public deleteProject = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    await this.handleNoContentRequest(
-      req,
-      res,
-      next,
-      async () => {
-        const id = this.getIdFromParams(req);
-        return await deleteProjectService(id);
-      }
-    );
+  public deleteProject = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    await this.handleNoContentRequest(req, res, next, async () => {
+      const id = this.getIdFromParams(req);
+      return await deleteProjectService(id);
+    });
   };
 }
 

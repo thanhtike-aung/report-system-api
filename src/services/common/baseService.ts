@@ -14,7 +14,7 @@ export interface PaginationOptions {
   page?: number;
   limit?: number;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 }
 
 export interface DateRange {
@@ -32,7 +32,10 @@ export abstract class BaseService {
   /**
    * Create a success response
    */
-  protected createSuccessResponse<T>(data: T, message?: string): ServiceResponse<T> {
+  protected createSuccessResponse<T>(
+    data: T,
+    message?: string,
+  ): ServiceResponse<T> {
     return {
       success: true,
       data,
@@ -54,8 +57,8 @@ export abstract class BaseService {
    * Get date range for today
    */
   protected getTodayRange(): DateRange {
-    const startDate = dayjs().startOf('day').toDate();
-    const endDate = dayjs().endOf('day').toDate();
+    const startDate = dayjs().startOf("day").toDate();
+    const endDate = dayjs().endOf("day").toDate();
     return { startDate, endDate };
   }
 
@@ -64,8 +67,8 @@ export abstract class BaseService {
    */
   protected getDateRange(date: string | Date): DateRange {
     const targetDate = dayjs(date);
-    const startDate = targetDate.startOf('day').toDate();
-    const endDate = targetDate.endOf('day').toDate();
+    const startDate = targetDate.startOf("day").toDate();
+    const endDate = targetDate.endOf("day").toDate();
     return { startDate, endDate };
   }
 
@@ -74,7 +77,7 @@ export abstract class BaseService {
    */
   protected getPeriodRange(days: number): DateRange {
     const endDate = dayjs().toDate();
-    const startDate = dayjs().subtract(days, 'day').toDate();
+    const startDate = dayjs().subtract(days, "day").toDate();
     return { startDate, endDate };
   }
 
@@ -84,11 +87,11 @@ export abstract class BaseService {
   protected async validateExists<T>(
     findOperation: () => Promise<T | null>,
     resourceName: string,
-    id?: number | string
+    id?: number | string,
   ): Promise<T> {
     const record = await findOperation();
     if (!record) {
-      const identifier = id ? ` with ID ${id}` : '';
+      const identifier = id ? ` with ID ${id}` : "";
       throw new NotFoundError(`${resourceName}${identifier} not found`);
     }
     return record;
@@ -97,7 +100,7 @@ export abstract class BaseService {
   /**
    * Validate array of IDs
    */
-  protected validateIds(ids: any[], fieldName: string = 'IDs'): number[] {
+  protected validateIds(ids: any[], fieldName: string = "IDs"): number[] {
     if (!Array.isArray(ids)) {
       throw new ValidationError(`${fieldName} must be an array`);
     }
@@ -105,7 +108,9 @@ export abstract class BaseService {
     const numericIds = ids.map((id, index) => {
       const numId = Number(id);
       if (isNaN(numId) || numId <= 0) {
-        throw new ValidationError(`Invalid ID at index ${index}: ${id}. All IDs must be positive numbers`);
+        throw new ValidationError(
+          `Invalid ID at index ${index}: ${id}. All IDs must be positive numbers`,
+        );
       }
       return numId;
     });
@@ -120,10 +125,12 @@ export abstract class BaseService {
   /**
    * Validate single ID
    */
-  protected validateId(id: any, fieldName: string = 'ID'): number {
+  protected validateId(id: any, fieldName: string = "ID"): number {
     const numId = Number(id);
     if (isNaN(numId) || numId <= 0) {
-      throw new ValidationError(`Invalid ${fieldName}: ${id}. Must be a positive number`);
+      throw new ValidationError(
+        `Invalid ${fieldName}: ${id}. Must be a positive number`,
+      );
     }
     return numId;
   }
@@ -133,19 +140,28 @@ export abstract class BaseService {
    */
   protected async executeWithTransaction<T>(
     operation: (tx: any) => Promise<T>,
-    operationName: string
+    operationName: string,
   ): Promise<T> {
     try {
       logger.debug(`Starting database operation: ${operationName}`);
-      
-      const result = await this.prisma.$transaction(async (tx) => {
-        return await operation(tx);
-      });
+
+      const result = await this.prisma.$transaction(
+        async (tx) => {
+          return await operation(tx);
+        },
+        {
+          maxWait: 5000,
+          timeout: 10000,
+        },
+      );
 
       logger.debug(`Database operation completed: ${operationName}`);
       return result;
     } catch (error) {
-      logger.error(`Database operation failed: ${operationName}`, error as Error);
+      logger.error(
+        `Database operation failed: ${operationName}`,
+        error as Error,
+      );
       throw error;
     }
   }
@@ -155,7 +171,7 @@ export abstract class BaseService {
    */
   protected async execute<T>(
     operation: () => Promise<T>,
-    operationName: string
+    operationName: string,
   ): Promise<T> {
     try {
       logger.debug(`Starting database operation: ${operationName}`);
@@ -163,7 +179,10 @@ export abstract class BaseService {
       logger.debug(`Database operation completed: ${operationName}`);
       return result;
     } catch (error) {
-      logger.error(`Database operation failed: ${operationName}`, error as Error);
+      logger.error(
+        `Database operation failed: ${operationName}`,
+        error as Error,
+      );
       throw error;
     }
   }
@@ -172,13 +191,13 @@ export abstract class BaseService {
    * Build pagination query options
    */
   protected buildPaginationOptions(options: PaginationOptions = {}) {
-    const { page = 1, limit = 10, sortBy, sortOrder = 'desc' } = options;
-    
+    const { page = 1, limit = 10, sortBy, sortOrder = "desc" } = options;
+
     const skip = (page - 1) * limit;
     const take = limit;
-    
+
     const orderBy = sortBy ? { [sortBy]: sortOrder } : undefined;
-    
+
     return {
       skip,
       take,
@@ -230,10 +249,10 @@ export abstract class BaseService {
    */
   protected excludeSensitiveFields<T extends Record<string, any>>(
     obj: T,
-    excludeFields: string[] = ['password']
+    excludeFields: string[] = ["password"],
   ): Omit<T, keyof typeof excludeFields> {
     const result = { ...obj };
-    excludeFields.forEach(field => {
+    excludeFields.forEach((field) => {
       delete result[field];
     });
     return result;

@@ -9,9 +9,7 @@ import {
   getByIdAndDate as getAttendanceByIdAndDateService,
 } from "../../services/attendance/attendanceService";
 import { NotFoundError } from "../../utils/errors";
-import {
-  getActiveUsers,
-} from "../../services/user/userService";
+import { getActiveUsers } from "../../services/user/userService";
 import {
   sendAttendanceReminderToTeams,
   sendAttendanceToTeams as sendAttendanceToTeamsUtils,
@@ -19,6 +17,7 @@ import {
 import { Attendance } from "types/attendance";
 import { STATUS_CODES } from "../../constants/messages";
 import { logger } from "../../utils/logger";
+import { TYPE } from "../../constants/attendance";
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 15 * 60 * 1000;
@@ -27,7 +26,11 @@ class AttendanceController extends BaseController {
   /**
    * Get all attendances
    */
-  public getAttendances = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public getAttendances = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     await this.handleRequest(
       req,
       res,
@@ -35,14 +38,18 @@ class AttendanceController extends BaseController {
       async () => {
         return await getAttendanceService();
       },
-      "Attendances retrieved successfully"
+      "Attendances retrieved successfully",
     );
   };
 
   /**
    * Get attendance by user ID
    */
-  public getAttendanceById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public getAttendanceById = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     await this.handleRequest(
       req,
       res,
@@ -51,14 +58,18 @@ class AttendanceController extends BaseController {
         const id = this.getIdFromParams(req);
         return await getAttendanceByIdService(id);
       },
-      "Attendance retrieved successfully"
+      "Attendance retrieved successfully",
     );
   };
 
   /**
    * Get attendance by user ID and date
    */
-  public getAttendanceByIdAndDate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public getAttendanceByIdAndDate = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     await this.handleRequest(
       req,
       res,
@@ -66,49 +77,66 @@ class AttendanceController extends BaseController {
       async () => {
         const id = this.getIdFromParams(req);
         const date = req.params.date;
-        
+
         if (!date) {
           throw new Error("Date parameter is required");
         }
-        
-        const test =  await getAttendanceByIdAndDateService(id, date);
-        console.log("--------------------------------");
-        console.log(test);
-        console.log("--------------------------------");
-        return test;
+
+        const attendance = await getAttendanceByIdAndDateService(id, date);
+        if (!attendance) {
+          throw new NotFoundError("Attendance not found");
+        }
+
+        return attendance;
       },
-      "Attendance retrieved successfully"
+      "Attendance retrieved successfully",
     );
   };
 
   /**
    * Create attendance
    */
-  public createAttendance = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public createAttendance = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     await this.handleRequest(
       req,
       res,
       next,
       async () => {
         validateInput(req.body, [
-          { field: 'reportedBy', required: true, type: 'number' },
-          { field: 'createdBy', required: true, type: 'number' },
-          { field: 'workingTime', required: true, type: 'string' },
-          { field: 'workspace', required: true, type: 'string' },
-          { field: 'project', required: true, type: 'string' }
+          { field: "reportedBy", required: true, type: "number" },
+          { field: "createdBy", required: true, type: "number" },
+          {
+            field: "workingTime",
+            required: req.body.type === TYPE.WORKING ? true : false,
+            type: "string",
+          },
+          {
+            field: "workspace",
+            required: req.body.type === TYPE.WORKING ? true : false,
+            type: "string",
+          },
+          { field: "project", required: true, type: "string" },
         ]);
 
         return await createAttendanceService(req.body);
       },
       "Attendance created successfully",
-      STATUS_CODES.CREATED
+      STATUS_CODES.CREATED,
     );
   };
 
   /**
    * Get today's attendances
    */
-  public getAttendanceByDate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public getAttendanceByDate = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     await this.handleRequest(
       req,
       res,
@@ -120,7 +148,7 @@ class AttendanceController extends BaseController {
         }
         return attendance;
       },
-      "Today's attendance retrieved successfully"
+      "Today's attendance retrieved successfully",
     );
   };
 }
@@ -163,7 +191,9 @@ export const sendAttendanceToTeams = async (): Promise<void> => {
 
   while (retryCount <= MAX_RETRIES && !isSuccess) {
     try {
-      logger.info(`Attempting attendance Teams notification (Attempt ${retryCount + 1}/${MAX_RETRIES + 1})`);
+      logger.info(
+        `Attempting attendance Teams notification (Attempt ${retryCount + 1}/${MAX_RETRIES + 1})`,
+      );
 
       const users = await getActiveUsers();
       const attendances = await getTodayAttendanceService();
@@ -185,14 +215,19 @@ export const sendAttendanceToTeams = async (): Promise<void> => {
       isSuccess = true;
       logger.info("Attendance Teams notification sent successfully");
     } catch (error) {
-      logger.error(`Attendance Teams notification failed (Attempt ${retryCount + 1})`, error as Error);
+      logger.error(
+        `Attendance Teams notification failed (Attempt ${retryCount + 1})`,
+        error as Error,
+      );
       retryCount++;
       await handleRetryDelay(retryCount);
     }
   }
 
   if (!isSuccess) {
-    logger.error("Failed to send attendance Teams notification after all retries");
+    logger.error(
+      "Failed to send attendance Teams notification after all retries",
+    );
   }
 };
 
@@ -201,6 +236,7 @@ const attendanceController = new AttendanceController();
 // Export individual methods for route handlers
 export const getAttendances = attendanceController.getAttendances;
 export const getAttendanceById = attendanceController.getAttendanceById;
-export const getAttendanceByIdAndDate = attendanceController.getAttendanceByIdAndDate;
+export const getAttendanceByIdAndDate =
+  attendanceController.getAttendanceByIdAndDate;
 export const createAttendance = attendanceController.createAttendance;
 export const getAttendanceByDate = attendanceController.getAttendanceByDate;

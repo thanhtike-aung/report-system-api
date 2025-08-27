@@ -1,10 +1,10 @@
 import { config } from "./config";
 
 export enum LogLevel {
-  ERROR = 'ERROR',
-  WARN = 'WARN',
-  INFO = 'INFO',
-  DEBUG = 'DEBUG'
+  ERROR = "ERROR",
+  WARN = "WARN",
+  INFO = "INFO",
+  DEBUG = "DEBUG",
 }
 
 interface LogEntry {
@@ -16,34 +16,39 @@ interface LogEntry {
 }
 
 class Logger {
-  private isDevelopment = config.NODE_ENV === 'development';
+  private isDevelopment = config.NODE_ENV === "development";
 
   private formatMessage(entry: LogEntry): string {
     const { timestamp, level, message, context, error } = entry;
-    
+
     let logMessage = `[${timestamp}] ${level}: ${message}`;
-    
+
     if (context) {
       logMessage += ` | Context: ${JSON.stringify(context)}`;
     }
-    
+
     if (error) {
       logMessage += ` | Error: ${error.message}`;
       if (this.isDevelopment && error.stack) {
         logMessage += `\nStack: ${error.stack}`;
       }
     }
-    
+
     return logMessage;
   }
 
-  private log(level: LogLevel, message: string, context?: any, error?: Error): void {
+  private log(
+    level: LogLevel,
+    message: string,
+    context?: any,
+    error?: Error,
+  ): void {
     const entry: LogEntry = {
       timestamp: new Date().toISOString(),
       level,
       message,
       context,
-      error
+      error,
     };
 
     const formattedMessage = this.formatMessage(entry);
@@ -82,8 +87,13 @@ class Logger {
     this.log(LogLevel.DEBUG, message, context);
   }
 
-  public request(method: string, url: string, statusCode: number, duration?: number): void {
-    const message = `${method} ${url} - ${statusCode}${duration ? ` (${duration}ms)` : ''}`;
+  public request(
+    method: string,
+    url: string,
+    statusCode: number,
+    duration?: number,
+  ): void {
+    const message = `${method} ${url} - ${statusCode}${duration ? ` (${duration}ms)` : ""}`;
     this.info(message);
   }
 }

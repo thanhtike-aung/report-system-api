@@ -33,8 +33,8 @@ export const CRON_SCHEDULES = {
     name: "morning_attendance",
     schedule: "30 08 * * 1-5", // 8:30 AM, Monday to Friday
     timezone: "Asia/Yangon",
-    enabled: config.NODE_ENV !== 'test',
-    description: "Send morning attendance message to Microsoft Teams"
+    enabled: config.NODE_ENV !== "test",
+    description: "Send morning attendance message to Microsoft Teams",
   },
   // ... other jobs
 };
@@ -94,12 +94,9 @@ Example:
 ```typescript
 // In jobs/myJobs.ts
 export const setupMyJobs = (): void => {
-  cronScheduler.registerJob(
-    "MY_JOB",
-    async () => {
-      // Job implementation
-    }
-  );
+  cronScheduler.registerJob("MY_JOB", async () => {
+    // Job implementation
+  });
 };
 
 // In jobs/index.ts
@@ -127,6 +124,7 @@ export const initializeCronJobs = (): void => {
 ## Monitoring
 
 Each job tracks:
+
 - `isRunning`: Whether job is currently executing
 - `lastRun`: Last execution time
 - `nextRun`: Next scheduled execution (approximate)

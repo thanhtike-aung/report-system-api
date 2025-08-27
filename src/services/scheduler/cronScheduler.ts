@@ -22,10 +22,13 @@ export class CronScheduler {
   registerJob(
     jobName: string,
     handler: () => Promise<void>,
-    customConfig?: Partial<typeof CRON_SCHEDULES.MORNING_ATTENDANCE>
+    customConfig?: Partial<typeof CRON_SCHEDULES.MORNING_ATTENDANCE>,
   ): void {
-    const config = customConfig 
-      ? { ...getCronSchedule(jobName as keyof typeof CRON_SCHEDULES), ...customConfig }
+    const config = customConfig
+      ? {
+          ...getCronSchedule(jobName as keyof typeof CRON_SCHEDULES),
+          ...customConfig,
+        }
       : getCronSchedule(jobName as keyof typeof CRON_SCHEDULES);
 
     if (!config.enabled) {
@@ -43,35 +46,36 @@ export class CronScheduler {
       if (!job) return;
 
       if (job.isRunning) {
-        logger.warn(`Cron job ${jobName} is already running, skipping this execution`);
+        logger.warn(
+          `Cron job ${jobName} is already running, skipping this execution`,
+        );
         return;
       }
 
       job.isRunning = true;
       job.lastRun = new Date();
-      
+
       try {
         logger.info(`Starting cron job: ${jobName}`, {
           jobName,
           schedule: config.schedule,
-          description: config.description
+          description: config.description,
         });
 
         await handler();
-        
+
         job.runCount++;
         logger.info(`Cron job completed successfully: ${jobName}`, {
           jobName,
           runCount: job.runCount,
-          duration: Date.now() - job.lastRun.getTime()
+          duration: Date.now() - job.lastRun.getTime(),
         });
-
       } catch (error) {
         job.errorCount++;
         logger.error(`Cron job failed: ${jobName}`, error as Error, {
           jobName,
           runCount: job.runCount,
-          errorCount: job.errorCount
+          errorCount: job.errorCount,
         });
       } finally {
         job.isRunning = false;
@@ -97,7 +101,7 @@ export class CronScheduler {
       jobName,
       schedule: config.schedule,
       timezone: config.timezone,
-      description: config.description
+      description: config.description,
     });
   }
 
@@ -114,7 +118,9 @@ export class CronScheduler {
     this.jobs.forEach((job, jobName) => {
       try {
         job.task.start();
-        job.nextRun = this.getNextRunTime(getCronSchedule(jobName as keyof typeof CRON_SCHEDULES).schedule);
+        job.nextRun = this.getNextRunTime(
+          getCronSchedule(jobName as keyof typeof CRON_SCHEDULES).schedule,
+        );
         startedCount++;
         logger.info(`Started cron job: ${jobName}`);
       } catch (error) {
@@ -123,7 +129,9 @@ export class CronScheduler {
     });
 
     this.isInitialized = true;
-    logger.info(`Cron scheduler initialized with ${startedCount}/${this.jobs.size} jobs started`);
+    logger.info(
+      `Cron scheduler initialized with ${startedCount}/${this.jobs.size} jobs started`,
+    );
   }
 
   /**
@@ -177,7 +185,9 @@ export class CronScheduler {
 
     try {
       job.task.start();
-      job.nextRun = this.getNextRunTime(getCronSchedule(jobName as keyof typeof CRON_SCHEDULES).schedule);
+      job.nextRun = this.getNextRunTime(
+        getCronSchedule(jobName as keyof typeof CRON_SCHEDULES).schedule,
+      );
       logger.info(`Started cron job: ${jobName}`);
       return true;
     } catch (error) {
@@ -205,7 +215,7 @@ export class CronScheduler {
       nextRun: job.nextRun,
       runCount: job.runCount,
       errorCount: job.errorCount,
-      isScheduled: this.isJobRunning(job.task)
+      isScheduled: this.isJobRunning(job.task),
     }));
   }
 
@@ -242,17 +252,24 @@ export class CronScheduler {
    */
   async shutdown(): Promise<void> {
     logger.info("Shutting down cron scheduler...");
-    
+
     // Wait for running jobs to complete (with timeout)
-    const runningJobs = Array.from(this.jobs.values()).filter(job => job.isRunning);
+    const runningJobs = Array.from(this.jobs.values()).filter(
+      (job) => job.isRunning,
+    );
     if (runningJobs.length > 0) {
-      logger.info(`Waiting for ${runningJobs.length} running jobs to complete...`);
-      
+      logger.info(
+        `Waiting for ${runningJobs.length} running jobs to complete...`,
+      );
+
       const timeout = 30000; // 30 seconds timeout
       const startTime = Date.now();
-      
-      while (runningJobs.some(job => job.isRunning) && (Date.now() - startTime) < timeout) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+
+      while (
+        runningJobs.some((job) => job.isRunning) &&
+        Date.now() - startTime < timeout
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
     }
 

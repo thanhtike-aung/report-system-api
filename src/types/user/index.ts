@@ -60,7 +60,7 @@ export interface UpdateUserPayload {
   projectId?: number;
 }
 
-export interface UserResponse extends Omit<User, 'password'> {
+export interface UserResponse extends Omit<User, "password"> {
   project: Project;
   supervisor?: User;
 }

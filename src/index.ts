@@ -12,7 +12,10 @@ import { errorHandler } from "./middlewares/errorHandlerMiddleware";
 import { requestLogger } from "./middlewares/requestLogger";
 import { config, validateConfig } from "./utils/config";
 import { logger } from "./utils/logger";
-import { initializeCronJobs, shutdownCronJobs } from "./services/scheduler/jobs";
+import {
+  initializeCronJobs,
+  shutdownCronJobs,
+} from "./services/scheduler/jobs";
 
 dotenv.config();
 
@@ -50,44 +53,46 @@ const server = app.listen(config.NODE_PORT, () => {
 // Graceful shutdown handling
 const gracefulShutdown = async (signal: string) => {
   logger.info(`Received ${signal}, starting graceful shutdown...`);
-  
+
   // Stop accepting new connections
   server.close(async (err) => {
     if (err) {
-      logger.error('Error during server shutdown', err);
+      logger.error("Error during server shutdown", err);
       process.exit(1);
     }
-    
+
     try {
       // Shutdown cron jobs
       await shutdownCronJobs();
-      
-      logger.info('Graceful shutdown completed');
+
+      logger.info("Graceful shutdown completed");
       process.exit(0);
     } catch (error) {
-      logger.error('Error during graceful shutdown', error as Error);
+      logger.error("Error during graceful shutdown", error as Error);
       process.exit(1);
     }
   });
-  
+
   // Force shutdown after 10 seconds
   setTimeout(() => {
-    logger.error('Force shutdown after timeout');
+    logger.error("Force shutdown after timeout");
     process.exit(1);
   }, 10000);
 };
 
 // Listen for shutdown signals
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 
 // Handle uncaught exceptions
-process.on('uncaughtException', (error) => {
-  logger.error('Uncaught Exception', error);
-  gracefulShutdown('uncaughtException');
+process.on("uncaughtException", (error) => {
+  logger.error("Uncaught Exception", error);
+  gracefulShutdown("uncaughtException");
 });
 
-process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled Rejection', new Error(String(reason)), { promise: String(promise) });
-  gracefulShutdown('unhandledRejection');
+process.on("unhandledRejection", (reason, promise) => {
+  logger.error("Unhandled Rejection", new Error(String(reason)), {
+    promise: String(promise),
+  });
+  gracefulShutdown("unhandledRejection");
 });

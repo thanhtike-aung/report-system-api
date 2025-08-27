@@ -6,10 +6,12 @@ import { logger } from "../../utils/logger";
 
 interface CreateProjectPayload {
   name: string;
+  color: string;
 }
 
 interface UpdateProjectPayload {
   name?: string;
+  color?: string;
 }
 
 class ProjectService extends BaseService {
@@ -25,7 +27,7 @@ class ProjectService extends BaseService {
       return await this.prisma.project.findMany({
         include: { users: true },
       });
-    }, 'getAllProjects');
+    }, "getAllProjects");
   }
 
   /**
@@ -33,17 +35,18 @@ class ProjectService extends BaseService {
    */
   async getProjectById(id: number): Promise<Project> {
     return this.execute(async () => {
-      const projectId = this.validateId(id, 'Project ID');
+      const projectId = this.validateId(id, "Project ID");
 
       return await this.validateExists(
-        () => this.prisma.project.findUnique({
-          where: { id: projectId },
-          include: { users: true },
-        }),
-        'Project',
-        projectId
+        () =>
+          this.prisma.project.findUnique({
+            where: { id: projectId },
+            include: { users: true },
+          }),
+        "Project",
+        projectId,
       );
-    }, 'getProjectById');
+    }, "getProjectById");
   }
 
   /**
@@ -51,39 +54,46 @@ class ProjectService extends BaseService {
    */
   async createProject(projectData: CreateProjectPayload): Promise<Project> {
     return this.execute(async () => {
-      logger.info('Creating new project', { name: projectData.name });
+      logger.info("Creating new project", { name: projectData.name });
 
       const newProject = await this.prisma.project.create({
         data: {
           name: projectData.name,
+          color: projectData.color,
         },
         include: { users: true },
       });
 
-      logger.info('Project created successfully', { 
-        projectId: newProject.id, 
-        name: newProject.name 
+      logger.info("Project created successfully", {
+        projectId: newProject.id,
+        name: newProject.name,
       });
 
       return newProject;
-    }, 'createProject');
+    }, "createProject");
   }
 
   /**
    * Update project
    */
-  async updateProject(id: number, projectData: UpdateProjectPayload): Promise<Project> {
+  async updateProject(
+    id: number,
+    projectData: UpdateProjectPayload,
+  ): Promise<Project> {
     return this.execute(async () => {
-      const projectId = this.validateId(id, 'Project ID');
+      const projectId = this.validateId(id, "Project ID");
 
       // Verify project exists
       await this.validateExists(
         () => this.prisma.project.findUnique({ where: { id: projectId } }),
-        'Project',
-        projectId
+        "Project",
+        projectId,
       );
 
-      logger.info('Updating project', { projectId, changes: Object.keys(projectData) });
+      logger.info("Updating project", {
+        projectId,
+        changes: Object.keys(projectData),
+      });
 
       const updateData: any = {
         updated_at: new Date(),
@@ -97,10 +107,10 @@ class ProjectService extends BaseService {
         include: { users: true },
       });
 
-      logger.info('Project updated successfully', { projectId });
+      logger.info("Project updated successfully", { projectId });
 
       return updatedProject;
-    }, 'updateProject');
+    }, "updateProject");
   }
 
   /**
@@ -108,13 +118,13 @@ class ProjectService extends BaseService {
    */
   async deleteProject(id: number): Promise<boolean> {
     return this.execute(async () => {
-      const projectId = this.validateId(id, 'Project ID');
+      const projectId = this.validateId(id, "Project ID");
 
       // Verify project exists
       await this.validateExists(
         () => this.prisma.project.findUnique({ where: { id: projectId } }),
-        'Project',
-        projectId
+        "Project",
+        projectId,
       );
 
       // Check if project has users
@@ -124,19 +134,21 @@ class ProjectService extends BaseService {
       });
 
       if (projectWithUsers?.users && projectWithUsers.users.length > 0) {
-        throw new Error('Cannot delete project with existing users. Please reassign users first.');
+        throw new Error(
+          "Cannot delete project with existing users. Please reassign users first.",
+        );
       }
 
-      logger.info('Deleting project', { projectId });
+      logger.info("Deleting project", { projectId });
 
       await this.prisma.project.delete({
         where: { id: projectId },
       });
 
-      logger.info('Project deleted successfully', { projectId });
+      logger.info("Project deleted successfully", { projectId });
 
       return true;
-    }, 'deleteProject');
+    }, "deleteProject");
   }
 }
 
@@ -145,6 +157,8 @@ const projectService = new ProjectService();
 // Legacy exports for backward compatibility
 export const get = () => projectService.getAllProjects();
 export const getById = (id: number) => projectService.getProjectById(id);
-export const create = (project: CreateProjectPayload) => projectService.createProject(project);
-export const update = (id: number, project: UpdateProjectPayload) => projectService.updateProject(id, project);
+export const create = (project: CreateProjectPayload) =>
+  projectService.createProject(project);
+export const update = (id: number, project: UpdateProjectPayload) =>
+  projectService.updateProject(id, project);
 export const destroy = (id: number) => projectService.deleteProject(id);
